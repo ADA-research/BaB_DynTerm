@@ -50,3 +50,17 @@ experiment_groups = {
     "CIFAR 10": CIFAR_EXPERIMENTS,
     "LARGE RESNET": LARGE_RESNET_EXPERIMENTS
 }
+
+experiment_samples = {
+    "MNIST_6_100": 960,
+    "MNIST_9_100": 947,
+    "MNIST_CONV_BIG": 929,
+    "MNIST_CONV_SMALL": 980,
+    "CIFAR_RESNET_2B": 703,
+    "MARABOU": 500,
+    "OVAL21": 500,
+    "VIT": 500,
+    "SRI_RESNET_A": 500,
+    "CIFAR_100": 500,
+    "TINY_IMAGENET": 500
+}

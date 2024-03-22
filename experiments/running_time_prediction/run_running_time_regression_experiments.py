@@ -28,7 +28,7 @@ def run_experiments_from_config(config):
 
     include_timeouts = config.get("INCLUDE_TIMEOUTS", True)
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
-    cutoff = config.get("CUTOFF", None)
+    cutoff = config.get("MAX_RUNNING_TIME", None)
 
     results_path = config.get("RESULTS_PATH", "./results_running_time_regression")
     os.makedirs(results_path, exist_ok=True)

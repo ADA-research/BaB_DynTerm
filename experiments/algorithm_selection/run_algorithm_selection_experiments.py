@@ -7,7 +7,13 @@ from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL
 from src.util.data_loaders import load_algorithm_selection_data
 
 
-def run_algorithm_selection_experiment_from_config(config):
+def run_algorithm_selection_experiment_from_config(config: dict):
+    """
+    Run algorithm selection experiments using a continuous feature collection phase from a config
+
+    :param config: refer to experiments/algorithm_selection/config.py
+    """
+
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", os.listdir(verification_logs_path))
     if not experiments:
@@ -20,7 +26,7 @@ def run_algorithm_selection_experiment_from_config(config):
     stop_predicted_timeouts = config.get("STOP_PREDICTED_TIMEOUTS", False)
     selection_thresholds = config.get("SELECTION_THRESHOLDS", [.99])
 
-    classification_method = config.get("CLASSIFICATION_METHOD", "NAIVE")
+    RANDOM_STATE = config.get("RANDOM_STATE", 42)
 
     results_path = config.get("RESULTS_PATH", "./results_running_time_prediction")
     os.makedirs(results_path, exist_ok=True)
@@ -62,22 +68,12 @@ def run_algorithm_selection_experiment_from_config(config):
             neuron_count=experiment_neuron_count, cutoff=cutoff, par=par, no_classes=no_classes)
 
         for threshold in selection_thresholds:
-            adaptive_algorithm_selection(
-                features=features_best_verifiers,
-                best_verifiers=best_verifiers,
-                enum_results=enum_results,
-                running_times=running_times,
-                verifier_data=verifier_data,
-                frequency=frequency,
-                threshold=threshold,
-                artificial_cutoff=cutoff,
-                verifiers=verifiers,
-                feature_collection_cutoff=feature_collection_cutoff,
-                stop_predicted_timeouts=stop_predicted_timeouts,
-                results_path=experiment_results_path,
-                first_classification_at=first_classification_at,
-                classification_method=classification_method
-            )
+            adaptive_algorithm_selection(features=features_best_verifiers, best_verifiers=best_verifiers,
+                                         enum_results=enum_results, verifiers=verifiers, running_times=running_times,
+                                         frequency=frequency, artificial_cutoff=cutoff, threshold=threshold,
+                                         stop_predicted_timeouts=stop_predicted_timeouts,
+                                         first_classification_at=first_classification_at,
+                                         results_path=experiment_results_path, random_state=RANDOM_STATE)
 
 
 if __name__ == "__main__":

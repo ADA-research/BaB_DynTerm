@@ -1,230 +1,42 @@
-from itertools import combinations
 
 from sklearn import preprocessing
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold
 
 import numpy as np
 
 from src.eval.algorithm_selection import eval_fold, eval_final
-from src.util.constants import TIMEOUT
-
-
-def algorithm_selection_running_time_regression(features, running_times, enum_results, verifiers,
-                                                feature_collection_cutoff=None, stop_predicted_timeouts=False):
-    no_verifiers = len(verifiers)
-    indices = np.array(range(int(len(running_times) / no_verifiers)))
-    max_running_time = pow(10, max(running_times))
-    fold_evals = {}
-
-    kf = StratifiedKFold(n_splits=5, random_state=42, shuffle=True)
-
-    split_labels = np.array([1 for _ in running_times])
-    split_labels[running_times < feature_collection_cutoff] = 0
-    split_labels[enum_results == 2.] = 2
-
-    for fold, (train_indices, test_indices) in enumerate(kf.split(features, split_labels)):
-        print(f"---------------------- FOLD {fold} -------------------------------")
-
-        train_indices = indices[train_indices]
-        test_indices = indices[test_indices]
-
-        train_features = np.array([])
-        train_running_times = np.array([])
-        for train_index in train_indices:
-            train_features = np.append(
-                train_features,
-                features[train_index * no_verifiers:train_index * no_verifiers + no_verifiers]
-            )
-            train_running_times = np.append(
-                train_running_times,
-                running_times[train_index * no_verifiers:train_index * no_verifiers + no_verifiers]
-            )
-        train_features = np.reshape(train_features, (len(train_indices) * no_verifiers, -1))
-
-        test_features = np.array([])
-        test_running_times = np.array([])
-        test_results = np.array([])
-        for test_index in test_indices:
-            test_features = np.append(
-                test_features,
-                features[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            )
-            test_running_times = np.append(
-                test_running_times,
-                running_times[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            )
-            test_results = np.append(
-                test_results,
-                enum_results[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            )
-        test_features = np.reshape(test_features, (len(test_indices) * no_verifiers, -1))
-
-        scaler = preprocessing.StandardScaler().fit(train_features)
-        train_features = scaler.transform(train_features)
-        test_features = scaler.transform(test_features)
-
-        predictor = RandomForestRegressor(n_estimators=200, random_state=42)
-        predictor.fit(train_features, train_running_times)
-
-        selected_verifiers = []
-        selection_running_times = []
-        selection_results = []
-        for test_index in range(len(test_indices)):
-            instance_features = test_features[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            instance_running_times = test_running_times[
-                                     test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            instance_results = test_results[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            instance_running_time = 0
-
-            # instance already solved during feature collection --> skip with best running time times portfolio overhead!
-            if any([running_time < np.log10(feature_collection_cutoff) for running_time in instance_running_times]):
-                best_runtime = np.min(instance_running_times)
-                best_verifier_index = np.argmin(instance_running_times)
-                selected_verifiers.append(best_verifier_index)
-                selection_results.append(instance_results[best_verifier_index])
-                selection_running_times.append(pow(10, best_runtime) * no_verifiers)
-                continue
-            else:
-                instance_running_time += feature_collection_cutoff * no_verifiers
-
-            prediction = predictor.predict(instance_features)
-
-            if stop_predicted_timeouts and all(
-                    [max_running_time - 10 <= pow(10, pred) <= max_running_time for pred in prediction]):
-                best_verifier_index = -1
-                instance_result = 2.
-            else:
-                best_verifier_index = np.argmin(prediction)
-                selection_running_time = instance_running_times[best_verifier_index]
-                instance_result = instance_results[best_verifier_index]
-                instance_running_time += (pow(10, selection_running_time) - feature_collection_cutoff)
-
-            selected_verifiers.append(best_verifier_index)
-            selection_results.append(instance_result)
-            selection_running_times.append(instance_running_time)
-
-        fold_eval = eval_fold(
-            running_times=test_running_times,
-            selection_running_times=selection_running_times,
-            results=test_results,
-            selection_results=selection_results,
-            chosen_verifiers=selected_verifiers,
-            verifiers=verifiers,
-            vbs_schedules_timeouts=not stop_predicted_timeouts,
-            first_classification_at=feature_collection_cutoff
-        )
-        fold_evals[fold] = fold_eval
-
-
-def algorithm_selection_classification(features, best_verifiers, enum_results, verifiers, running_times,
-                                       feature_collection_cutoff=None, stop_predicted_timeouts=False):
-    no_verifiers = len(verifiers)
-    fold_evals = {}
-
-    kf = KFold(n_splits=5, random_state=None, shuffle=True)
-
-    split_labels = np.array([1 for _ in running_times])
-    split_labels[running_times < feature_collection_cutoff] = 0
-    split_labels[enum_results == 2.] = 2
-
-    for fold, (train_indices, test_indices) in enumerate(kf.split(features, split_labels)):
-
-        print(f"---------------------- FOLD {fold} -------------------------------")
-
-        train_features = features[train_indices]
-        train_best_verifiers = best_verifiers[train_indices]
-        test_features = features[test_indices]
-        test_best_verifiers = best_verifiers[test_indices]
-
-        test_running_times = np.array([])
-        test_results = np.array([])
-        for test_index in test_indices:
-            test_running_times = np.append(
-                test_running_times,
-                running_times[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            )
-            test_results = np.append(
-                test_results,
-                enum_results[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            )
-
-        scaler = preprocessing.StandardScaler().fit(train_features)
-        train_features = scaler.transform(train_features)
-        test_features = scaler.transform(test_features)
-
-        predictor = RandomForestClassifier(n_estimators=200, random_state=42)
-        predictor.fit(train_features, train_best_verifiers)
-        predictions = predictor.predict(test_features)
-
-        selected_verifiers = []
-        selection_running_times = []
-        selection_results = []
-        for test_index in range(len(test_indices)):
-            instance_running_times = test_running_times[
-                                     test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            instance_results = test_results[test_index * no_verifiers:test_index * no_verifiers + no_verifiers]
-            instance_running_time = 0
-
-            # instance already solved during feature collection --> skip with best running time times portfolio overhead!
-            if any([running_time < np.log10(feature_collection_cutoff) for running_time in instance_running_times]):
-                best_runtime = np.min(instance_running_times)
-                best_verifier_index = np.argmin(instance_running_times)
-                selected_verifiers.append(best_verifier_index)
-                selection_results.append(instance_results[best_verifier_index])
-                selection_running_times.append(pow(10, best_runtime) * no_verifiers)
-                continue
-            else:
-                instance_running_time += feature_collection_cutoff * no_verifiers
-
-            instance_prediction = predictions[test_index]
-
-            if stop_predicted_timeouts and predictions[test_index] == -1:
-                best_verifier_index = -1
-                instance_result = 2.
-            elif not stop_predicted_timeouts and predictions[test_index] == -1:
-                # if predictor says that instance will timeout but we must schedule one verifier,
-                # we choose one at random!
-                best_verifier_index = instance_prediction
-                chosen_verifier_index = np.random.randint(0, no_verifiers)
-                selection_running_time = instance_running_times[chosen_verifier_index]
-                instance_result = instance_results[chosen_verifier_index]
-                instance_running_time += pow(10, selection_running_time)
-            else:
-                best_verifier_index = instance_prediction
-                selection_running_time = instance_running_times[best_verifier_index]
-                instance_result = instance_results[best_verifier_index]
-                instance_running_time += (pow(10, selection_running_time) - feature_collection_cutoff)
-
-            selected_verifiers.append(best_verifier_index)
-            selection_results.append(instance_result)
-            selection_running_times.append(instance_running_time)
-
-        fold_eval = eval_fold(
-            running_times=test_running_times,
-            selection_running_times=selection_running_times,
-            results=test_results,
-            selection_results=selection_results,
-            chosen_verifiers=selected_verifiers,
-            verifiers=verifiers,
-            vbs_schedules_timeouts=not stop_predicted_timeouts,
-            first_classification_at=feature_collection_cutoff
-        )
-        fold_evals[fold] = fold_eval
 
 
 def adaptive_algorithm_selection(features, best_verifiers, enum_results, verifiers, running_times, frequency,
-                                 verifier_data, artificial_cutoff, threshold,
-                                 feature_collection_cutoff=None, stop_predicted_timeouts=False,
-                                 classification_method="NAIVE",
-                                 first_classification_at=None, results_path="./results"):
+                                 artificial_cutoff, threshold,
+                                 stop_predicted_timeouts=False,
+                                 first_classification_at=None, results_path="./results",
+                                 random_state=42):
+    """
+    Function to perform the algorithm selection, including training a classifier at regular checkpoints and
+    choosing algorithms accordingly.
+
+    :param features: numpy array of features for each instance. Each feature must be the concatenation of the features of all verifiers.
+    :param best_verifiers: numpy array with training labels, i.e., which verifier performed best on each instance.
+    :param enum_results: numpy array of verification results for each instance and verifier
+    :param verifiers: array of verifiers ran on this experiment
+    :param running_times: numpy array of running times for each instance and verifier
+    :param frequency: frequency at which algorithm selection is performed
+    :param artificial_cutoff: cutoff time, i.e., maximum running time
+    :param threshold: confidence threshold a classification must exceed s.t. it is counted
+    :param stop_predicted_timeouts: if predicted timeouts should be terminated or if one verification tool should be chosen at random
+    :param first_classification_at: seconds after which algorithm should be performed for the first time. If not provided, classification is first performed at 0+frequency
+    :param results_path: Path to store results to
+    :param random_state: Random state for initialization of Random Forest/Five-Fold split/numpy
+    """
+
+    np.random.seed(random_state)
     no_verifiers = len(verifiers)
     fold_evals = {}
     fold_data = {}
 
-    # TODO: Add Presolving Phase where SBS (abCROWN) runs for X seconds to filter out "low hanging fruits" (?)
-
-    kf = StratifiedKFold(n_splits=5, random_state=42, shuffle=True)
+    kf = StratifiedKFold(n_splits=5, random_state=random_state, shuffle=True)
     feature_indices = range(len(features[frequency]))
 
     split_labels = np.array([1 for _ in feature_indices])
@@ -286,24 +98,8 @@ def adaptive_algorithm_selection(features, best_verifiers, enum_results, verifie
             train_features = scaler.transform(train_features)
             test_features = scaler.transform(test_features)
 
-            if classification_method == "NAIVE":
-                predictions = get_naive_predictions(
-                    train_features=train_features,
-                    train_best_verifiers=train_best_verifiers,
-                    threshold=threshold,
-                    test_features=test_features
-                )
-            elif classification_method == "PAIRWISE":
-                predictions = get_pairwise_predictions(
-                    train_indices=train_indices,
-                    test_indices=test_indices,
-                    test_features=test_features,
-                    checkpoint=checkpoint,
-                    threshold=threshold,
-                    verifier_data=verifier_data
-                )
-            else:
-                assert False, "Unsupported Classification Method!"
+            predictions = get_predictions(train_features=train_features, train_best_verifiers=train_best_verifiers,
+                                          test_features=test_features, threshold=threshold)
 
             for test_index in range(len(test_indices)):
                 if test_index in solved_indices or test_index in stopped_indices:
@@ -321,8 +117,6 @@ def adaptive_algorithm_selection(features, best_verifiers, enum_results, verifie
                     selection_running_times[test_index] = pow(10, best_runtime) * no_verifiers
                     solved_indices_checkpoint.append(test_index)
 
-                    if best_verifier_index != 0 and checkpoint > 10 and instance_running_times[0] > np.log10(30):
-                        print(f"INSTANCE {test_index} SOLVED IN PORTFOLIO!")
                     continue
 
                 if first_classification_at > checkpoint:
@@ -405,11 +199,6 @@ def adaptive_algorithm_selection(features, best_verifiers, enum_results, verifie
         fold_data[fold]["chosen_verifiers"] = selected_verifiers
         fold_data[fold]["best_verifiers"] = test_best_verifiers
 
-        # TODO DELETE THAT
-        print("RAN IN PORTFOLIO", ran_in_portfolio)
-        print("SELECTED", ran_with_selected_algo)
-
-
     eval_final(
         fold_evals,
         fold_data,
@@ -419,8 +208,17 @@ def adaptive_algorithm_selection(features, best_verifiers, enum_results, verifie
     )
 
 
-def get_naive_predictions(train_features, train_best_verifiers, test_features, threshold):
-    predictor = RandomForestClassifier(n_estimators=200, random_state=42)
+def get_predictions(train_features, train_best_verifiers, test_features, threshold, random_state=42):
+    """
+    Train a random forest and get best verifier predictions for algorithm selection
+    :param train_features: features to train on
+    :param train_best_verifiers: labels to train on
+    :param test_features: features to classify
+    :param threshold: confidence threshold a prediction must exceed such that it is counted
+    :param random_state: random state for random forest
+    :return: predictions on test features
+    """
+    predictor = RandomForestClassifier(n_estimators=200, random_state=random_state)
     predictor.fit(train_features, train_best_verifiers)
     if threshold:
         predictions = predictor.predict_proba(test_features)
@@ -433,74 +231,3 @@ def get_naive_predictions(train_features, train_best_verifiers, test_features, t
 
     return predictions
 
-
-def get_pairwise_predictions(train_indices, test_indices, test_features, checkpoint, verifier_data, threshold):
-    supported_verifiers = verifier_data.keys()
-    pairwise_combinations = combinations(supported_verifiers, 2)
-    pairwise_classifiers = {}
-    for combination in pairwise_combinations:
-        verifier_1, verifier_2 = combination
-        train_features = np.concatenate(
-            (verifier_data[verifier_1]["features"][checkpoint][train_indices],
-             verifier_data[verifier_2]["features"][checkpoint][train_indices]),
-            axis=1)
-        train_labels = verifier_data[verifier_1]["running_times"][train_indices] > \
-                       verifier_data[verifier_2]["running_times"][train_indices]
-        train_labels = train_labels.astype(int)
-        both_timeout_indices = (verifier_data[verifier_1]["enum_results"][train_indices] == TIMEOUT) & (
-                verifier_data[verifier_1]["enum_results"][train_indices] == TIMEOUT)
-        train_labels[both_timeout_indices] = -1
-        predictor = RandomForestClassifier(n_estimators=200, random_state=42)
-
-        predictor.fit(train_features, train_labels)
-        pairwise_classifiers[combination] = predictor
-
-    votes = np.zeros((len(test_indices), len(supported_verifiers) + 1))
-    verifier_positions = {
-        verifier: position + 1    # we take position + 1 as index 0 is reserved for timeout
-        for (position, verifier) in enumerate(supported_verifiers)
-    }
-    uncertain_indices = []
-    for combination in combinations(supported_verifiers, 2):
-        verifier_1, verifier_2 = combination
-        test_features = np.concatenate(
-            (verifier_data[verifier_1]["features"][checkpoint][test_indices],
-             verifier_data[verifier_2]["features"][checkpoint][test_indices]),
-            axis=1)
-        predictor = pairwise_classifiers[combination]
-
-        if threshold:
-            pairwise_predictions = predictor.predict_proba(test_features)
-            if pairwise_predictions.shape[1] > 1:
-                pairwise_predictions = [np.argmax(pred) if np.max(pred) > threshold else None for pred in
-                                        pairwise_predictions]
-        else:
-            pairwise_predictions = predictor.predict(test_features)
-
-        for index, pred in enumerate(pairwise_predictions):
-            if pred is None:
-                # if any predictor did not surpass the confidence threshold, we postpone classification!
-                uncertain_indices.append(index)
-                uncertain_indices = list(set(uncertain_indices))
-            elif pred == 0:
-                votes[index][0] += 1
-                if index in uncertain_indices:
-                    uncertain_indices.remove(index)
-            else:
-                pred_verifier = combination[pred - 1]
-                pred_verifier_index = verifier_positions[pred_verifier]
-                votes[index][pred_verifier_index] += 1
-
-                if index in uncertain_indices:
-                    uncertain_indices.remove(index)
-
-    # TODO: Weitersammeln bis man eine eindeutige Entscheidung hat!
-    # TODO: Erst stoppen wenn ALLE verifier sagen bitte stoppen!
-    predictions = np.argmax(votes, axis=1)
-    # substract 1 from whole array to conform with class labels (-1): all timeout, (0-2): verifier indices
-    predictions = predictions - 1
-    # set uncertain indices to None
-    predictions = predictions.tolist()
-    for index in uncertain_indices:
-        predictions[index] = None
-    return predictions

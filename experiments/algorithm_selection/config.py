@@ -11,7 +11,7 @@ CONFIG_ADAPTIVE_ALGORITHM_SELECTION = {
     # ATTENTION: this is an EXCLUSIVE lower bound!
     "SELECTION_THRESHOLDS": [0.5, 0.99],
     "STOP_PREDICTED_TIMEOUTS": False,
-    "CLASSIFICATION_METHOD": "NAIVE",  # can be PAIRWISE or NAIVE
+    "RANDOM_STATE": 42,
     "EXPERIMENTS_INFO": {
         "MNIST_6_100": {
             "neuron_count": 510,
@@ -68,7 +68,7 @@ CONFIG_ADAPTIVE_ALGORITHM_SELECTION_AND_TERMINATION = {
     # ATTENTION: this is an EXCLUSIVE lower bound!
     "SELECTION_THRESHOLDS": [0.5, 0.99],
     "STOP_PREDICTED_TIMEOUTS": True,
-    "CLASSIFICATION_METHOD": "NAIVE",  # can be PAIRWISE or NAIVE
+    "RANDOM_STATE": 42,
     "EXPERIMENTS_INFO": {
         "MNIST_6_100": {
             "neuron_count": 510,

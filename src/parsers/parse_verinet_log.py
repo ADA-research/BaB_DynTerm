@@ -9,6 +9,11 @@ from src.util.io import load_log_file
 
 
 def parse_verinet_log(log_string):
+    """
+    Extracts running time and verification result of each instance given a verification log of VeriNet
+    :param log_string: log as string
+    :return: dict including running time and verification result for each instance
+    """
     return_dict = {}
     split_by_instances = log_string.split("Verifying image")
     for instance_lines in split_by_instances:
@@ -65,6 +70,19 @@ def parse_verinet_log(log_string):
 
 def get_features_from_verification_log(log_string, bab_feature_cutoff=10, include_bab_features=True,
                                        total_neuron_count=None, frequency=None, no_classes=10):
+    """
+    Extracts features of each instance given a VeriNet log string
+    :param log_string: string of ab-CROWN log
+    :param bab_feature_cutoff: cutoff time for feature collection
+    :param include_bab_features: if dynamic features (BaB-features) should be included
+    :param frequency: if features should be collected at regular frequencies. Can be None, then bab_feature_cutoff is used as cutoff,
+        else features are collected at regular checkpoints according to chosen frequency
+    :param total_neuron_count: neuron count of network to be verified
+    :param no_classes: Number of classes that given network has. Needed to calculate fraction of safe constraints.
+    :return: if frequency is None: array of all features collected up to bab_feature_cutoff. If frequency is set,
+        returns a dict with feature values for each checkpoint.
+    """
+
     if frequency:
         features = defaultdict(dict)
     else:
@@ -146,16 +164,13 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
             if "One-Shot Safe Constraints" in line:
 
-                # Define a regular expression pattern to match the array
                 pattern = r'\[([\d,\s]+)\]'
 
-                # Search for the pattern in the input string
                 match = re.search(pattern, line)
 
                 if match:
                     array_str = match.group(1)
 
-                    # Split the array string by commas and spaces to get individual elements
                     one_shot_safe_constraints = [int(num) for num in re.split(r',\s*', array_str)]
 
                     # print("One-Shot Safe constraints:", one_shot_safe_constraints)

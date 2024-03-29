@@ -11,6 +11,21 @@ from src.util.visualization.diagrams import create_confusion_matrix, create_scat
 def eval_fold(running_times, selection_running_times, results, selection_results, chosen_verifiers, verifiers,
               first_classification_at, ran_in_portfolio=None,
               ran_with_selected_algo=None, vbs_schedules_timeouts=False):
+    """
+    Evaluates a fold of algorithm selection results in comparison to the SBS and VBS.
+    :param running_times: Running times of the single verifiers on the test instances
+    :param selection_running_times: Running times taken by the algorithm selection approach per instance
+    :param results: results of the respective verifiers on each instance
+    :param selection_results: results of the algorithm selector on each instance
+    :param chosen_verifiers: verifiers chosen by the algorithm selector
+    :param verifiers: verifiers the experiment ran on
+    :param first_classification_at: point in time to perform the first classification
+    :param ran_in_portfolio: array of instance indices for which no algorithm selection was made, e.g. that ran in a parallel portfolio
+    :param ran_with_selected_algo: array of instance indices for which an algorithm selection was made
+    :param vbs_schedules_timeouts: how to calculate VBS: does it schedule timeouts or not?
+    :return: dict containing running times/no. solved instances of SBS/VBS/Algo Select and accuracy scores of algo selection
+    """
+
     no_verifiers = len(verifiers)
     verifier_running_times = [0 for _ in range(no_verifiers)]
     verifier_solved_instances = [0 for _ in range(no_verifiers)]
@@ -94,6 +109,14 @@ def eval_fold(running_times, selection_running_times, results, selection_results
 
 
 def eval_final(fold_evals, fold_data, results_path, verifiers, threshold):
+    """
+    Function to aggregate fold metrics (sum and avg.) and to plot ECDF plot + Confusion Matrix
+    :param fold_evals: dict containing all fold evaluations
+    :param fold_data: Algorithm Selection and Verifier data for each fold (running times, verification results)
+    :param results_path: where to store results
+    :param verifiers: array of verifiers that ran the experiment
+    :param threshold: confidence threshold a prediction had to exceed s.t. it was counted
+    """
     sum_fold = defaultdict(int)
     for fold in fold_evals:
         for key, value in fold_evals[fold].items():
@@ -140,8 +163,7 @@ def eval_final(fold_evals, fold_data, results_path, verifiers, threshold):
             "selection_results"]
 
     filename_confusion_matrix = os.path.join(results_path, f"confusion_matrix_threshold_{threshold}.png")
-    create_confusion_matrix(preds, best_verifier_labels, incompletes_included=True,
-                            filename=filename_confusion_matrix)
+    create_confusion_matrix(preds, best_verifier_labels, filename=filename_confusion_matrix)
 
     create_ecdf_plot(
         running_times_all_verifiers=running_times_comparison,

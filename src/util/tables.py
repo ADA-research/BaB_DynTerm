@@ -6,7 +6,12 @@ import numpy as np
 from src.util.constants import experiment_groups, TIMEOUT, UNSAT, SUPPORTED_VERIFIERS, experiment_samples
 
 
-def create_running_time_table(results_path):
+def create_running_time_regression_table(results_path):
+    """
+    Creates table in CSV format for running time regression experiments.
+    :param results_path: path with results of experiment
+    :return: table in CSV format
+    """
     csv = r"Verifiers,$\alpha\beta$-CROWN,,,VeriNet,,,Oval,," + "\n"
     csv += r"Metrics,RMSE,R2,$\rho$,RMSE,R2,$\rho$,RMSE,R2,$\rho$" + "\n"
     for experiment_group, experiments in experiment_groups.items():
@@ -29,6 +34,12 @@ def create_running_time_table(results_path):
 
 
 def create_timeouts_table(results_path, thresholds):
+    """
+    Creates table in CSV format for timeout prediction experiment.
+    :param results_path: path with results of experiment
+    :param thresholds: thresholds that should be included in table.
+    :return: table in CSV format
+    """
     csv = r"$\theta$,,"
     for threshold in thresholds:
         csv += f"{threshold},,,,,,,,,"
@@ -62,6 +73,12 @@ def create_timeouts_table(results_path, thresholds):
 
 
 def create_timeout_termination_table(results_path, thresholds):
+    """
+    Creates table in CSV format for premature termination of presumed timeouts.
+    :param results_path: path with results of experiment
+    :param thresholds: thresholds that should be included in table.
+    :return: table in CSV format
+    """
     csv = ',,'
     for threshold in thresholds:
         csv += rf"$\theta$={threshold},,,,,,,,,,,,,,"

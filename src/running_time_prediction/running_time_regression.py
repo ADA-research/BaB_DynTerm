@@ -58,15 +58,11 @@ def train_running_time_predictor_random_forest(training_inputs, running_times,
         rf_regressor = RandomForestRegressor(n_estimators=200, random_state=random_state)
         rf_regressor.fit(X=train_inputs, y=train_labels_runtime)
 
-        fold_metrics = eval_running_time_prediction_fold(
-            rf_regressor=rf_regressor,
-            train_inputs=train_inputs,
-            train_labels=train_labels_runtime,
-            test_inputs=test_inputs,
-            test_labels=test_labels_runtime,
-            feature_collection_cutoff=feature_collection_cutoff,
-            sat_labels=verification_results[test_index]
-        )
+        fold_metrics = eval_running_time_prediction_fold(rf_regressor=rf_regressor, train_inputs=train_inputs,
+                                                         train_labels=train_labels_runtime, test_inputs=test_inputs,
+                                                         test_labels=test_labels_runtime,
+                                                         feature_collection_cutoff=feature_collection_cutoff,
+                                                         test_verification_results=verification_results[test_index])
         metrics[fold] = fold_metrics
 
         predictions_fold = rf_regressor.predict(test_inputs)
@@ -75,11 +71,6 @@ def train_running_time_predictor_random_forest(training_inputs, running_times,
         running_time_labels_shuffled = np.append(running_time_labels_shuffled, test_labels_runtime)
         sat_labels_shuffled = np.append(sat_labels_shuffled, verification_results[test_index])
 
-    eval_running_time_prediction_final(
-        predictions=predictions,
-        running_time_labels=running_time_labels_shuffled,
-        sat_labels=sat_labels_shuffled,
-        results_path=results_path,
-        feature_collection_cutoff=feature_collection_cutoff,
-        metrics=metrics
-    )
+    eval_running_time_prediction_final(predictions=predictions, running_time_labels=running_time_labels_shuffled,
+                                       verification_results=sat_labels_shuffled, results_path=results_path,
+                                       feature_collection_cutoff=feature_collection_cutoff, metrics=metrics)

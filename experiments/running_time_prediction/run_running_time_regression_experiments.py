@@ -12,6 +12,18 @@ from src.util.data_loaders import load_abcrown_data, load_verinet_data, load_ova
 def run_running_time_regression_experiment(features, running_times, results, include_timeouts=True,
                                            include_incomplete_results=True, results_path="./results",
                                            feature_collection_cutoff=None, random_state=42):
+    """
+    Starts running time regression experiment
+
+    :param features: numpy array of features for each problem instance
+    :param running_times: numpy array of running times for each problem instance
+    :param results: numpy array of verification results
+    :param include_timeouts: If to include/exclude timeouted instances from training/prediction
+    :param include_incomplete_results: If to include/exclude instances solved very quickly using incomplete methods from training/prediction
+    :param results_path: Path to save results to
+    :param feature_collection_cutoff: Number of seconds to collect features for before performing running time prediction
+    :param random_state: random state to for random forest/five-fold-cross-validation splits
+    """
     train_running_time_predictor_random_forest(training_inputs=features, running_times=running_times,
                                                verification_results=results, include_timeouts=include_timeouts,
                                                include_incomplete_results=include_incomplete_results,
@@ -21,6 +33,13 @@ def run_running_time_regression_experiment(features, running_times, results, inc
 
 
 def run_experiments_from_config(config):
+    """
+    Function to run running time regression experiments with a provided config
+    :param config: Refer to sample file experiments/running_time_prediction/config.py
+    :type config: dict
+    :return: None
+    """
+
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:

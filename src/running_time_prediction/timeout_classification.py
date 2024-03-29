@@ -12,6 +12,19 @@ def train_timeout_classifier_random_forest(training_inputs, running_times, resul
                                            feature_collection_cutoff,
                                            verification_results, include_incomplete_results=False,
                                            threshold=.5, random_state=42):
+    """
+    Trains and evaluates a random forest model trained on features collected in a fixed interval
+    to predict if an instance will not be solved in a five-fold cross validation.
+    :param training_inputs: array of features of all instances
+    :param running_times: array of running times of all instances
+    :param results_path: path to store results to
+    :param feature_collection_cutoff: seconds for which features were collected, i.e. the point in time at
+        which the prediction was made
+    :param verification_results: array of verification results of all instances
+    :param include_incomplete_results: if results solved before feature collection cutoff should be used in training/predictions
+    :param threshold: confidence threshold a classification must exceed such that is it counted
+    :param random_state: random state for random forest classifier/five-fold cross validation split
+    """
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
 
     training_inputs = np.array(training_inputs)
@@ -68,8 +81,8 @@ def train_timeout_classifier_random_forest(training_inputs, running_times, resul
         else:
             predictions = probability_predictions
 
-        fold_eval = eval_timeout_classification_fold(probability_predictions, predictions, test_labels_sat,
-                                                     test_running_times, feature_collection_cutoff)
+        fold_eval = eval_timeout_classification_fold(predictions, test_labels_sat, test_running_times,
+                                                     feature_collection_cutoff)
         metrics[fold] = fold_eval
 
         preds = np.append(preds, predictions)
@@ -86,24 +99,35 @@ def train_timeout_classifier_random_forest(training_inputs, running_times, resul
             timeout_running_times.append(running_time_labels_shuffled[index])
     timeout_running_times = np.array(timeout_running_times)
 
-    eval_final_timeout_classification(
-        predictions=preds,
-        sat_labels=sat_labels_shuffled,
-        timeout_labels=sat_timeout_labels_shuffled,
-        running_time_labels=running_time_labels_shuffled,
-        metrics=metrics,
-        threshold=threshold,
-        results_path=results_path,
-        include_incomplete_results=include_incomplete_results,
-        feature_collection_cutoff=feature_collection_cutoff,
-        running_times_timeout_prediction=timeout_running_times
-    )
+    eval_final_timeout_classification(predictions=preds, verification_results=sat_labels_shuffled,
+                                      timeout_labels=sat_timeout_labels_shuffled,
+                                      running_time_labels=running_time_labels_shuffled, metrics=metrics,
+                                      threshold=threshold, results_path=results_path,
+                                      include_incomplete_results=include_incomplete_results,
+                                      feature_collection_cutoff=feature_collection_cutoff,
+                                      running_times_timeout_prediction=timeout_running_times)
 
 
 def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=None, include_incomplete_results=False,
                                         results_path="./results", threshold=.5,
                                         classification_frequency=10, cutoff=600, first_classification_at=None,
                                         no_classes=10, random_state=42):
+    """
+    Trains and evaluates a timeout prediction model that classifies instances in regular intervals
+    :param log_path: path to log file
+    :param load_data_func: function to load data from log file
+    :param neuron_count: neuron count of evaluated neural network
+    :param include_incomplete_results: if instances solved before the first classification should be included in training/prediction
+    :param results_path: path to store results to
+    :param threshold: confidence threshold a prediction must exceed s.t. it is counted, i.e. s.t. an instance is terminated prematurely
+    :param classification_frequency: frequency of checkpoints at which a classification is made
+    :param cutoff: running time cutoff of verification runs
+    :param first_classification_at: seconds after which the first classification is made, if None perform first classification at
+        0+frequency seconds
+    :param no_classes: number of output classes in verified neural network
+    :param random_state: random state for random forest/five-fold cross validation split
+    """
+
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
 
     training_inputs, running_time_training_outputs, results, satisfiability_training_outputs = load_data_func(
@@ -205,31 +229,39 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
         running_time_labels_timeout_prediction = np.append(running_time_labels_timeout_prediction,
                                                            running_times_timeout_prediction_test)
 
-        fold_eval = eval_timeout_classification_fold(None, predictions, test_labels_sat, test_running_times,
+        fold_eval = eval_timeout_classification_fold(predictions, test_labels_sat, test_running_times,
                                                      feature_collection_cutoff=feature_collection_cutoff)
         metrics[fold] = fold_eval
 
-    eval_final_timeout_classification(
-        predictions=preds,
-        sat_labels=sat_labels_shuffled,
-        timeout_labels=sat_timeout_labels_shuffled,
-        running_time_labels=running_time_labels_shuffled,
-        metrics=metrics,
-        threshold=threshold,
-        results_path=results_path,
-        include_incomplete_results=include_incomplete_results,
-        feature_collection_cutoff=feature_collection_cutoff,
-        running_times_timeout_prediction=running_time_labels_timeout_prediction
-    )
+    eval_final_timeout_classification(predictions=preds, verification_results=sat_labels_shuffled,
+                                      timeout_labels=sat_timeout_labels_shuffled,
+                                      running_time_labels=running_time_labels_shuffled, metrics=metrics,
+                                      threshold=threshold, results_path=results_path,
+                                      include_incomplete_results=include_incomplete_results,
+                                      feature_collection_cutoff=feature_collection_cutoff,
+                                      running_times_timeout_prediction=running_time_labels_timeout_prediction)
 
 
-def timeout_prediction_baseline(features, running_times, results, sat_labels, verifier,
+def timeout_prediction_baseline(features, running_times, verification_results, verifier,
                                 include_incomplete_results=False, results_path="./results",
                                 classification_frequency=10, cutoff=600, feature_collection_cutoff=10
                                 ):
-    timeout_indices = np.where(sat_labels == 2)
-    no_timeout_indices = np.where(sat_labels != 2)
-    sat_timeout_labels = np.copy(sat_labels)
+    """
+    Evaluates a baseline on stopping timeouts based on a simple heuristic: if remaining branches times the average time needed
+    for the verification of a branch exceeds the maximum running time, predict a timeout
+    :param features: array of features of each instance
+    :param running_times: array of running times of each instance
+    :param verification_results: array of verification results of each instance
+    :param verifier: verifier for which the predictions are made
+    :param include_incomplete_results: if instances solved before the first checkpoint should be included in training/classification
+    :param results_path: path to store results to
+    :param classification_frequency: frequency in which instances are classified
+    :param cutoff: cutoff time of verification procedure
+    :param feature_collection_cutoff: point in time at which first classification is performed
+    """
+    timeout_indices = np.where(verification_results == 2)
+    no_timeout_indices = np.where(verification_results != 2)
+    sat_timeout_labels = np.copy(verification_results)
     sat_timeout_labels[timeout_indices] = 1
     sat_timeout_labels[no_timeout_indices] = 0
 
@@ -238,7 +270,7 @@ def timeout_prediction_baseline(features, running_times, results, sat_labels, ve
         no_incomplete_indices = np.where(running_times > np.log10(feature_collection_cutoff))
         features = features[no_incomplete_indices]
         running_times = running_times[no_incomplete_indices]
-        sat_labels = sat_labels[no_incomplete_indices]
+        verification_results = verification_results[no_incomplete_indices]
         sat_timeout_labels = sat_timeout_labels[no_incomplete_indices]
 
     metrics = {}
@@ -251,7 +283,7 @@ def timeout_prediction_baseline(features, running_times, results, sat_labels, ve
         lower_bound = np.log10(checkpoint - classification_frequency)
         solved_instances_checkpoint = np.where(
             (running_times >= lower_bound) & (running_times <= upper_bound) & (
-                    sat_labels != 2))[0]
+                    verification_results != 2))[0]
         if solved_instances_checkpoint.shape[0] > 0:
             print(f"SOLVED {solved_instances_checkpoint} at {checkpoint} s!")
         solved_instances = np.append(solved_instances, solved_instances_checkpoint)
@@ -287,20 +319,13 @@ def timeout_prediction_baseline(features, running_times, results, sat_labels, ve
     predictions = np.zeros(sat_timeout_labels.shape)
     predictions[stopped_instances] = 1
 
-    fold_eval = eval_timeout_classification_fold(None, predictions, sat_timeout_labels,
-                                                 test_running_times=running_times,
-                                                 feature_collection_cutoff=feature_collection_cutoff, )
+    fold_eval = eval_timeout_classification_fold(predictions, sat_timeout_labels, test_running_times=running_times,
+                                                 feature_collection_cutoff=feature_collection_cutoff)
     metrics[0] = fold_eval
 
-    eval_final_timeout_classification(
-        predictions=predictions,
-        sat_labels=sat_labels,
-        timeout_labels=sat_timeout_labels,
-        running_time_labels=running_times,
-        metrics=metrics,
-        threshold=None,
-        results_path=results_path,
-        include_incomplete_results=include_incomplete_results,
-        feature_collection_cutoff=feature_collection_cutoff,
-        running_times_timeout_prediction=running_times_timeout_prediction,
-    )
+    eval_final_timeout_classification(predictions=predictions, verification_results=verification_results,
+                                      timeout_labels=sat_timeout_labels, running_time_labels=running_times,
+                                      metrics=metrics, threshold=None, results_path=results_path,
+                                      include_incomplete_results=include_incomplete_results,
+                                      feature_collection_cutoff=feature_collection_cutoff,
+                                      running_times_timeout_prediction=running_times_timeout_prediction)

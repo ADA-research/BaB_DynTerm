@@ -13,7 +13,19 @@ from src.util.constants import TIMEOUT
 
 
 def eval_running_time_prediction_fold(rf_regressor, train_inputs, train_labels, test_inputs, test_labels,
-                                      feature_collection_cutoff, sat_labels):
+                                      feature_collection_cutoff, test_verification_results):
+    """
+    Function to evaluate a fold of running time regression predictions according to several metrics
+    :param rf_regressor: trained sklearn random forest regression model
+    :param train_inputs: features the regression model was trained on
+    :param train_labels: labels the regression model was trained on
+    :param test_inputs: inputs from test set to evaluate the model on
+    :param test_labels: labels from test set to evaluate the model on
+    :param feature_collection_cutoff: seconds for which features were collected, i.e. the point in time at which the prediction was made
+    :param test_verification_results: verification results of the test set instances
+    :return: dict of metrics of the fold
+    """
+
     metrics = {}
 
     score = rf_regressor.score(train_inputs, train_labels)
@@ -62,7 +74,7 @@ def eval_running_time_prediction_fold(rf_regressor, train_inputs, train_labels, 
     max_running_time_train = max(train_labels)
     timeout_cutoff = np.log10(pow(10, max_running_time_train) - 10)
     timeout_predictions = np.where(test_predictions > timeout_cutoff, 1, 0)
-    timeouts = np.where(sat_labels == TIMEOUT, 1, 0)
+    timeouts = np.where(test_verification_results == TIMEOUT, 1, 0)
     timeout_acc = accuracy_score(timeouts, timeout_predictions)
     timeout_precision = precision_score(timeouts, timeout_predictions)
     timeout_recall = recall_score(timeouts, timeout_predictions)
@@ -103,11 +115,21 @@ def eval_running_time_prediction_fold(rf_regressor, train_inputs, train_labels, 
     return metrics
 
 
-def eval_running_time_prediction_final(predictions, running_time_labels, sat_labels, results_path,
+def eval_running_time_prediction_final(predictions, running_time_labels, verification_results, results_path,
                                        feature_collection_cutoff, metrics):
+    """
+    Function to aggregate all running time regression fold evaluations and to create scatter plot of all test set predictions
+    :param predictions: concatenated test set predictions of all folds
+    :param running_time_labels: concatenated true running times of test sets of all folds
+    :param verification_results: concatenated verification results of test sets of all folds
+    :param results_path: path to store results to
+    :param feature_collection_cutoff: seconds for which features were collected, i.e. the point in time at which the prediction was made
+    :param metrics: dict of fold evaluations of all folds
+    """
+
     for legend, filename in [("full", os.path.join(results_path, "scatter_plot_with_legend.pdf")),
                              (False, os.path.join(results_path, "scatter_plot.pdf"))]:
-        create_scatter_plot(predictions, running_time_labels, satisfiability_labels=sat_labels,
+        create_scatter_plot(predictions, running_time_labels, satisfiability_labels=verification_results,
                             filename=filename,
                             feature_collection_cutoff=feature_collection_cutoff,
                             legend=legend)
@@ -127,8 +149,17 @@ def eval_running_time_prediction_final(predictions, running_time_labels, sat_lab
         json.dump(metrics, f, indent=2)
 
 
-def eval_timeout_classification_fold(test_predictions_prob, test_predictions, test_labels, test_running_times,
+def eval_timeout_classification_fold(test_predictions, test_labels, test_running_times,
                                      feature_collection_cutoff):
+    """
+    Function to evaluate a fold of timeout predictions according to several metrics
+    :param test_predictions: timeout predictions on test set
+    :param test_labels: true timeout labels of test set instances
+    :param test_running_times: running times of test set instances
+    :param feature_collection_cutoff: seconds for which features were collected, i.e. the point in time at which the prediction was made
+    :return: dict of metrics of the fold
+    """
+
     unsolved_instances = np.where(test_running_times > feature_collection_cutoff)[0]
     if len(unsolved_instances) == 0:
         return None
@@ -179,9 +210,25 @@ def eval_timeout_classification_fold(test_predictions_prob, test_predictions, te
     return metrics
 
 
-def eval_final_timeout_classification(predictions, sat_labels, timeout_labels, running_time_labels, metrics, threshold,
+def eval_final_timeout_classification(predictions, verification_results, timeout_labels, running_time_labels, metrics, threshold,
                                       results_path, include_incomplete_results, feature_collection_cutoff,
                                       running_times_timeout_prediction):
+    """
+    Function to aggregate all timeout prediction fold evaluations
+    and to create scatter + ECDF plot and confusion matrix of all test set predictions
+
+    :param predictions: concatenation of all test set predictions over all folds
+    :param verification_results: concatenation of all true test set verification results over all folds
+    :param timeout_labels: concatenation of all timeout labels over all folds
+    :param running_time_labels: concatenation of all true running times over all folds
+    :param metrics: dict with metrics of each fold
+    :param threshold: confidence threshold a prediction must exceed such that it is counted
+    :param results_path: path to store results to
+    :param include_incomplete_results: if instances solved before feature collection cutoff should be included in scatter plot/confusion matrix
+    :param feature_collection_cutoff: seconds for which features are collected and after which the predictions are made
+    :param running_times_timeout_prediction: resulting running times if instances were stopped once they are predicted as timeouts
+    """
+
     filename_confusion_matrix = os.path.join(results_path, f"confusion_matrix_threshold_{threshold}.png")
     filename_scatter_plot = os.path.join(results_path, f"scatter_timeout_classification_threshold_{threshold}.png")
 
@@ -226,10 +273,8 @@ def eval_final_timeout_classification(predictions, sat_labels, timeout_labels, r
     timeout_labels_unsolved = timeout_labels[unsolved_instances]
     predictions_unsolved = predictions[unsolved_instances]
 
-    create_confusion_matrix(predictions_unsolved, timeout_labels_unsolved,
-                            incompletes_included=include_incomplete_results,
-                            filename=filename_confusion_matrix)
-    create_scatter_plot(predictions, running_time_labels, satisfiability_labels=sat_labels,
+    create_confusion_matrix(predictions_unsolved, timeout_labels_unsolved, filename=filename_confusion_matrix)
+    create_scatter_plot(predictions, running_time_labels, satisfiability_labels=verification_results,
                         y_label="Predicted Timeout", filename=filename_scatter_plot,
                         feature_collection_cutoff=feature_collection_cutoff)
 
@@ -242,10 +287,10 @@ def eval_final_timeout_classification(predictions, sat_labels, timeout_labels, r
         "Vanilla Verifier": running_time_labels.tolist(),
         "Timeout Prediction": running_times_timeout_prediction.tolist()
     }
-    results_timeout_prediction = sat_labels.copy()
+    results_timeout_prediction = verification_results.copy()
     results_timeout_prediction[predictions == 1.] = 2
     results_comparison = {
-        "Vanilla Verifier": sat_labels.tolist(),
+        "Vanilla Verifier": verification_results.tolist(),
         "Timeout Prediction": results_timeout_prediction.tolist()
     }
 

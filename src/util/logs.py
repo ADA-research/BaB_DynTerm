@@ -9,7 +9,10 @@ from src.util.constants import result_to_enum, SAT, TIMEOUT, UNSAT, ABCROWN, VER
 
 def fix_image_ids_in_logs_oval(log_string):
     """
-    Helpful Function if you merge multiple logs into one because of failed/distributed runs!
+    Function to replace ids in Oval verification log with continuous ids. Helpful
+     if  multiple logs are merged into one because of failed/distributed runs!
+    :param log_string: path to log string
+    :return: fixed log file
     """
     cur_index = 0
     fixed_string = ""
@@ -25,7 +28,10 @@ def fix_image_ids_in_logs_oval(log_string):
 
 def fix_image_ids_in_logs_verinet(log_string):
     """
-    Helpful Function if you merge multiple logs into one because of failed/distributed runs!
+    Function to replace ids in VeriNet verification log with continuous ids. Helpful
+     if  multiple logs are merged into one because of failed/distributed runs!
+    :param log_string: path to log string
+    :return: fixed log file
     """
     cur_index = 0
     fixed_string = ""
@@ -55,7 +61,6 @@ def sanity_check(experiment_dict):
                 "OVAL": "./verification_logs/oval-bab/MNIST_CONV_BIG/MNIST_CONV_BIG_FIXED.log"
             }
         }
-    :return:
     """
     for experiment_name, verifier_dict in experiment_dict.items():
         print(f"EXPERIMENT {experiment_name}")

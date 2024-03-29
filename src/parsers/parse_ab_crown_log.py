@@ -9,6 +9,11 @@ from src.util.io import load_log_file
 
 
 def parse_abcrown_log(log_string):
+    """
+    Extracts running time and verification result of each instance given a verification log of ab-CROWN
+    :param log_string: log as string
+    :return: dict including running time and verification result for each instance
+    """
     return_dict = {}
     split_by_instances = log_string.split("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% idx:")
     for instance_lines in split_by_instances:
@@ -42,6 +47,17 @@ def parse_abcrown_log(log_string):
 
 def get_features_from_verification_log(log_string, bab_feature_cutoff=10, include_bab_features=True, frequency=None,
                                        total_neuron_count=0):
+    """
+    Extracts features of each instance given a ab-CROWN log string
+    :param log_string: string of ab-CROWN log
+    :param bab_feature_cutoff: cutoff time for feature collection
+    :param include_bab_features: if dynamic features (BaB-features) should be included
+    :param frequency: if features should be collected at regular frequencies. Can be None, then bab_feature_cutoff is used as cutoff,
+        else features are collected at regular checkpoints according to chosen frequency
+    :param total_neuron_count: neuron count of network to be verified
+    :return: if frequency is None: array of all features collected up to bab_feature_cutoff. If frequency is set,
+        returns a dict with feature values for each checkpoint.
+    """
     if frequency:
         features = defaultdict(dict)
     else:
@@ -256,10 +272,3 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         features = np.reshape(features, (index_number + 1, -1))
     return features
 
-
-if __name__ == "__main__":
-    log_file = load_log_file("./verification_logs/OVAL21/abCROWN.log")
-    features = get_features_from_verification_log(log_file, include_bab_features=True, bab_feature_cutoff=600,
-                                                  frequency=60,
-                                                  total_neuron_count=1000)
-    print(features)

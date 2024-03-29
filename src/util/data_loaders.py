@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 
 from src.parsers.parse_ab_crown_log import parse_abcrown_log
@@ -14,6 +16,21 @@ from src.util.constants import result_to_enum, ABCROWN, VERINET, OVAL
 def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log=True, feature_path=None,
                       neuron_count=0, no_classes=10,
                       feature_collection_cutoff=10, filter_misclassified=False, frequency=None):
+    """
+    Function to return features, running times and verification results based on a log file of ab-CROWN
+    :param log_path: path to log file
+    :param artificial_cutoff: cutoff time for verification, may be lower than actual cutoff time
+    :param par: PAR score, i.e. factor by which the running times of unsolved instances are penalised
+    :param features_from_log: if features should be parsed from the log file or if they should be loaded from a numpy array
+    :param feature_path: must be provided if features_from_log is False. Path to numpy array of features.
+    :param neuron_count: neuron count of verified network
+    :param no_classes: number of output classes of verified network
+    :param feature_collection_cutoff: seconds for which features should be collected
+    :param filter_misclassified: if misclassified instances should be included or not
+    :param frequency: frequencies for which features should be provided
+    :return: features, running times, verification results in clear text and verification results as enum.
+        If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
+    """
     running_time_dict = parse_abcrown_log(load_log_file(log_path))
     if features_from_log:
         features = get_features_from_verification_log_abcrown(load_log_file(log_path),
@@ -51,7 +68,21 @@ def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log
 def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None,
                       filter_misclassified=False, neuron_count=0, feature_collection_cutoff=10, frequency=None,
                       no_classes=10, features_from_log=True):
-
+    """
+    Function to return features, running times and verification results based on a log file of VeriNet
+    :param log_path: path to log file
+    :param artificial_cutoff: cutoff time for verification, may be lower than actual cutoff time
+    :param par: PAR score, i.e. factor by which the running times of unsolved instances are penalised
+    :param features_from_log: if features should be parsed from the log file or if they should be loaded from a numpy array
+    :param feature_path: must be provided if features_from_log is False. Path to numpy array of features.
+    :param neuron_count: neuron count of verified network
+    :param no_classes: number of output classes of verified network
+    :param feature_collection_cutoff: seconds for which features should be collected
+    :param filter_misclassified: if misclassified instances should be included or not
+    :param frequency: frequencies for which features should be provided
+    :return: features, running times, verification results in clear text and verification results as enum.
+        If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
+    """
     running_time_dict = parse_verinet_log(load_log_file(log_path))
     log_string = load_log_file(log_path)
     features = get_features_from_verification_log_verinet(log_string, total_neuron_count=neuron_count,
@@ -98,7 +129,21 @@ def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None
 def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par=1, features_from_log=True,
                        feature_path=None, no_classes=10,
                        neuron_count=0, feature_collection_cutoff=10, filter_misclassified=False, frequency=None):
-
+    """
+    Function to return features, running times and verification results based on a log file of Oval.
+    :param log_path: path to log file
+    :param artificial_cutoff: cutoff time for verification, may be lower than actual cutoff time
+    :param par: PAR score, i.e. factor by which the running times of unsolved instances are penalised
+    :param features_from_log: if features should be parsed from the log file or if they should be loaded from a numpy array
+    :param feature_path: must be provided if features_from_log is False. Path to numpy array of features.
+    :param neuron_count: neuron count of verified network
+    :param no_classes: number of output classes of verified network
+    :param feature_collection_cutoff: seconds for which features should be collected
+    :param filter_misclassified: if misclassified instances should be included or not
+    :param frequency: frequencies for which features should be provided
+    :return: features, running times, verification results in clear text and verification results as enum.
+        If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
+    """
     running_time_dict = parse_oval_log(load_log_file(log_path))
     if features_from_log:
         features = get_features_from_verification_log_oval(load_log_file(log_path),
@@ -151,9 +196,27 @@ def load_algorithm_selection_data(abcrown_log_file, verinet_log_file, oval_log_f
                                   frequency=None,
                                   neuron_count=None, cutoff=None, par=None, filter_misclassified=True,
                                   no_classes=10):
-    verifier_data = {}
+    """
+    Function to gather features, running_times, verification results and labels that assign each instance the fastest verifier
+    for a benchmark.
+    :param abcrown_log_file: location of ab-CROWN log file.
+    :param verinet_log_file: location of VeriNet log file.
+    :param oval_log_file: location of Oval log file.
+    :param feature_collection_cutoff: seconds until features should be collected
+    :param frequency: frequency for which features should be provided
+    :param neuron_count: neuron count of verified network
+    :param cutoff: maximum running time of verification procedure
+    :param par: par score for running times, i.e. factor by which running times of unsolved instances are penalised.
+    :param filter_misclassified: if misclassified instances should be included or not.
+    :param no_classes: number of output classes of the verified neural network.
+    :return: concatenated features of all verifiers for each instance and verifier, running times for each instance and verifier,
+        verification results of each instance and verifier (as enum and as literals),
+        features for best_verifier prediction case, i.e. where each instance gets only one feature item that is the concatenation of
+        all verifier features, labels that assign each instance the fastest verification tool and verifier_data, i.e.
+        the bare running times and verification results of each verifier.s
+    """
+    verifier_data = defaultdict(dict)
     if abcrown_log_file:
-        verifier_data[ABCROWN] = {}
         abcrown_features, abcrown_running_times, abcrown_results, abcrown_enum_results = load_abcrown_data(
             log_path=abcrown_log_file,
             artificial_cutoff=cutoff,
@@ -170,7 +233,6 @@ def load_algorithm_selection_data(abcrown_log_file, verinet_log_file, oval_log_f
         verifier_data[ABCROWN]["enum_results"] = abcrown_enum_results
 
     if verinet_log_file:
-        verifier_data[VERINET] = {}
         verinet_features, verinet_running_times, verinet_results, verinet_enum_results = load_verinet_data(
             log_path=verinet_log_file,
             artificial_cutoff=cutoff,
@@ -188,7 +250,6 @@ def load_algorithm_selection_data(abcrown_log_file, verinet_log_file, oval_log_f
         verifier_data[VERINET]["enum_results"] = verinet_enum_results
 
     if oval_log_file:
-        verifier_data[OVAL] = {}
         oval_features, oval_running_times, oval_results, oval_enum_results = load_oval_bab_data(
             log_path=oval_log_file,
             artificial_cutoff=cutoff,

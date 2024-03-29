@@ -11,7 +11,13 @@ from src.util.constants import SUPPORTED_VERIFIERS, VERINET, OVAL, ABCROWN
 from src.util.data_loaders import load_verinet_data, load_oval_bab_data, load_abcrown_data
 
 
-def run_timeout_prediction_experiment(config):
+def run_timeout_prediction_experiment(config: dict):
+    """
+    Run Timeout prediction experiments using a fixed feature collection phase from a config
+
+    :param config: Refer to sample file experiments/running_time_prediction/config.py
+    """
+
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
@@ -87,7 +93,13 @@ def run_timeout_prediction_experiment(config):
                                                        random_state=random_state)
 
 
-def run_continuous_timeout_prediction_experiment(config):
+def run_continuous_timeout_prediction_experiment(config: dict):
+    """
+    Run Timeout prediction experiments using a continuous feature collection phase from a config
+
+    :param config: Refer to sample file experiments/running_time_prediction/config.py
+    """
+
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
@@ -155,14 +167,27 @@ def run_continuous_timeout_prediction_experiment(config):
                                                     random_state=random_state)
 
 
-def run_timeout_classification_experiments_from_config(config):
+def run_timeout_classification_experiments_from_config(config: dict):
+    """
+    Run Timeout prediction experiments using either fixed or continuous feature collection phase from a config. The
+    differentiation is made based on if FEATURE_COLLECTION_CUTOFF in the config is an int (fixed cutoff) or
+    equals "ADAPTIVE" (continuous cutoff).
+
+    :param config: Refer to sample file experiments/running_time_prediction/config.py
+    """
+
     if config.get("FEATURE_COLLECTION_CUTOFF") == "ADAPTIVE":
         run_continuous_timeout_prediction_experiment(config)
     else:
         run_timeout_prediction_experiment(config)
 
 
-def run_baseline_heuristic_experiments_from_config(config):
+def run_baseline_heuristic_experiments_from_config(config: dict):
+    """
+    Runs a basic baseline for timeout prediction using a simple heuristic (if number of remaining branches multiplied
+    by average time needed per branch exceeds cutoff time, predict timeout.
+    :param config: Refer to sample file experiments/running_time_prediction/config.py
+    """
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
@@ -229,17 +254,11 @@ def run_baseline_heuristic_experiments_from_config(config):
                 # This should never happen!
                 assert 0, "Encountered Unknown Verifier!"
 
-            timeout_prediction_baseline(
-                features=training_inputs,
-                running_times=running_times,
-                results=results,
-                sat_labels=satisfiability_training_outputs,
-                include_incomplete_results=include_incomplete_results,
-                classification_frequency=classification_frequency,
-                cutoff=cutoff,
-                results_path=verifier_results_path,
-                verifier=verifier
-            )
+            timeout_prediction_baseline(features=training_inputs, running_times=running_times,
+                                        verification_results=satisfiability_training_outputs, verifier=verifier,
+                                        include_incomplete_results=include_incomplete_results,
+                                        results_path=verifier_results_path,
+                                        classification_frequency=classification_frequency, cutoff=cutoff)
 
 
 if __name__ == "__main__":

@@ -9,95 +9,27 @@ from numpy import ndarray
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 import seaborn as sns
 
-from src.parsers.parse_ab_crown_log import parse_abcrown_log
 from src.parsers.parse_verinet_log import parse_verinet_log
-from src.util.io import load_log_file
-from src.util.constants import result_to_enum
-
-
-def draw_training_data_histograms(log_path, plot_title, artificial_cutoff=None, load_data_func=parse_abcrown_log):
-    running_time_dict = load_data_func(load_log_file(log_path))
-    running_time_dict = {key: item for key, item in running_time_dict.items() if item["result"] != "Status.Skipped"}
-    benchmark_data_sat = []
-    benchmark_data_unsat = []
-    benchmark_data_timeout = []
-    for problem_id in running_time_dict:
-        data = running_time_dict[problem_id]
-        result = result_to_enum[data["result"]]
-        time_needed = data["time"]
-        if artificial_cutoff and artificial_cutoff < time_needed:
-            time_needed = artificial_cutoff
-            result = result_to_enum["unknown"]
-        if result == 0:
-            benchmark_data_sat.append(time_needed)
-        elif result == 1:
-            benchmark_data_unsat.append(time_needed)
-        else:
-            benchmark_data_timeout.append(time_needed)
-    plt.hist((benchmark_data_unsat, benchmark_data_sat, benchmark_data_timeout), bins=20,
-             label=["unsat", "sat", "timeout"])
-    plt.legend()
-    plt.title(plot_title)
-    plt.savefig(f"./{plot_title}_runtimes_hist.png")
-    plt.close()
-
-
-def draw_all_running_time_histograms(results_path):
-    for benchmark in os.listdir(results_path):
-        benchmark_name = benchmark.replace("_", " ")
-        results_path_benchmark = f"{results_path}/{benchmark}"
-        for filename in os.listdir(results_path_benchmark):
-            if "metrics" in filename or os.path.isdir(f"{results_path_benchmark}/{filename}") \
-                    or filename.split(".")[-1] != "json":
-                continue
-
-            verifier = filename.split(".")[0]
-
-            with open(f"{results_path_benchmark}/{filename}", 'r') as f:
-                verifier_data = json.load(f)
-
-            draw_training_data_histograms(verifier_data, f"{benchmark_name} {verifier}",
-                                          f"{results_path_benchmark}/{benchmark_name}_{verifier}")
-
-
-def draw_normalized_feature_boxplots(feature_path, plot_title, feature_names=None):
-    features = np.load(feature_path)
-    features[features == -np.inf] = 0
-    normalized_features = sklearn.preprocessing.StandardScaler().fit_transform(features)
-
-    plt.figure(figsize=(15, 6))
-    plt.boxplot(normalized_features, vert=True, patch_artist=True)
-
-    # Customize the plot
-    plt.title(f'Boxplots for {plot_title}')
-    plt.xlabel('Feature')
-    plt.ylabel('Values')
-    plt.xticks(np.arange(1, 10),
-               [f'{feature_names[i] if feature_names else i}' for i in range(normalized_features.shape[1])])
-
-    # Show the plot
-    plt.savefig(f"./{plot_title}_feature_boxplots.png")
-    plt.close()
-
-
-def draw_impurity_based_feature_importance(forest_classifier, fold):
-    importances = forest_classifier.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in forest_classifier.estimators_], axis=0)
-    forest_importances = pd.Series(importances, index=[str(i) for i in range(importances.shape[0])])
-
-    fig, ax = plt.subplots()
-    forest_importances.plot.bar(yerr=std, ax=ax)
-    ax.set_title("Feature importances using MDI")
-    ax.set_ylabel("Mean decrease in impurity")
-    fig.tight_layout()
-    plt.savefig(f'feature-importance-fold-{fold}.png')
 
 
 def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels=None,
                         x_label="True running time [GPU s]",
                         y_label="Predicted running time [GPU s]",
-                        filename="scatter_plot_test_predictions.png", feature_collection_cutoff=None, legend="full"):
-
+                        filename="scatter_plot_test_predictions.png", feature_collection_cutoff=None, legend="full",
+                        min_value=10**-3, max_value=10**3):
+    """
+    Creates scatter plot of predicted running times against true running times.
+    :param predicted_runtimes: array of predictions
+    :param real_runtimes: array of true values
+    :param satisfiability_labels: array of verification results
+    :param x_label: label of x axis
+    :param y_label: label of y axis
+    :param filename: filename to store scatter plot to
+    :param feature_collection_cutoff: seconds after which running time prediction was made
+    :param legend: legend option for seaborn scatter plot
+    :param min_value: min x/y value
+    :param max_value:  max x/y value
+    """
     if satisfiability_labels is None:
         satisfiability_labels = []
 
@@ -110,11 +42,6 @@ def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels
     sns.set(font_scale=3)
     sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
     plt.figure(figsize=(16, 16))
-
-    # min_value = min(min(real_runtimes), min(predicted_runtimes))
-    # max_value = max(max(real_runtimes), max(predicted_runtimes))
-    min_value = 10 ** -3
-    max_value = 10 ** 3
 
     # Plot the ideal line (where predicted = real)
     plt.plot([min_value, max_value], [min_value, max_value], color='green', linestyle='--', label='Ideal')
@@ -167,13 +94,15 @@ def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels
     plt.savefig(filename)
 
 
-def create_confusion_matrix(predictions, labels, incompletes_included, filename="./confusion_matrix.png"):
+def create_confusion_matrix(predictions, labels, filename="./confusion_matrix.png"):
+    """
+    Creates Confusion matrix given class labels and predictions.
+    :param predictions: class predictions
+    :param labels: class labels
+    :param filename: filename to store confusion matrix to
+    """
     disp = ConfusionMatrixDisplay.from_predictions(labels, predictions)
     title = "Timeout Prediction"
-    if incompletes_included:
-        title += " - Incompletes Included"
-    else:
-        title += ' - Incompletes Excluded'
     acc = accuracy_score(labels, predictions)
     title += f'\n Acc: {acc * 100:.2f} %'
     disp.ax_.set_title(title)
@@ -182,6 +111,12 @@ def create_confusion_matrix(predictions, labels, incompletes_included, filename=
 
 
 def create_ecdf_plot(running_times_all_verifiers, results_all_verifiers, filename):
+    """
+    Creates an ECDF plot of running times of different verifiers
+    :param running_times_all_verifiers: dict containing running times of all verifiers
+    :param results_all_verifiers: dict containing verification results of all verifiers
+    :param filename: filename to save plot to
+    """
     sns.set(style="whitegrid")
     sns.set_palette("colorblind")
     sns.set(font_scale=3)
@@ -229,6 +164,3 @@ def create_ecdf_plot(running_times_all_verifiers, results_all_verifiers, filenam
         json.dump(ecdf_data, f, indent=2)
 
 
-if __name__ == "__main__":
-    draw_training_data_histograms("./verification_logs/VeriNet/CIFAR_RESNET_2B/VERINET-CIFAR-RESNET2B-40843902.log",
-                                  "CIFAR-10 Resnet 2B Verinet", load_data_func=parse_verinet_log)

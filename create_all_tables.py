@@ -16,21 +16,23 @@ table_timeouts_fixed_feature_collection = create_timeouts_table(
 with open("./tables/table_timeouts_fixed_feature_collection.csv", 'w', encoding='u8') as f:
     f.write(table_timeouts_fixed_feature_collection)
 
-table_timeouts_continuous_feature_collection = create_timeouts_table(
-    results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
-    thresholds=[.5, .99]
-)
 
-with open("./tables/table_timeouts_continuous_feature_collection.csv", 'w', encoding='u8') as f:
-    f.write(table_timeouts_continuous_feature_collection)
+for thresh in [.5, .8, .99]:
+    table_timeouts_continuous_feature_collection = create_timeouts_table(
+        results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
+        thresholds=[thresh]
+    )
 
-table_timeout_termination = create_timeout_termination_table(
-    results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
-    thresholds=[.99]
-)
+    with open(f"./tables/table_timeouts_continuous_feature_collection_{thresh}.csv", 'w', encoding='u8') as f:
+        f.write(table_timeouts_continuous_feature_collection)
 
-with open("./tables/table_timeout_termination.csv", 'w', encoding='u8') as f:
-    f.write(table_timeout_termination)
+    table_timeout_termination = create_timeout_termination_table(
+        results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
+        thresholds=[thresh]
+    )
+
+    with open(f"./tables/table_timeout_termination_{thresh}.csv", 'w', encoding='u8') as f:
+        f.write(table_timeout_termination)
 
 
 

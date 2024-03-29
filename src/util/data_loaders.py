@@ -51,6 +51,7 @@ def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log
 def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None,
                       filter_misclassified=False, neuron_count=0, feature_collection_cutoff=10, frequency=None,
                       no_classes=10, features_from_log=True):
+
     running_time_dict = parse_verinet_log(load_log_file(log_path))
     log_string = load_log_file(log_path)
     features = get_features_from_verification_log_verinet(log_string, total_neuron_count=neuron_count,
@@ -97,6 +98,7 @@ def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None
 def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par=1, features_from_log=True,
                        feature_path=None, no_classes=10,
                        neuron_count=0, feature_collection_cutoff=10, filter_misclassified=False, frequency=None):
+
     running_time_dict = parse_oval_log(load_log_file(log_path))
     if features_from_log:
         features = get_features_from_verification_log_oval(load_log_file(log_path),
@@ -143,3 +145,170 @@ def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par
         features[features == np.inf] = 0
 
     return features, running_times, results, np.array(enum_results)
+
+
+def load_algorithm_selection_data(abcrown_log_file, verinet_log_file, oval_log_file, feature_collection_cutoff=None,
+                                  frequency=None,
+                                  neuron_count=None, cutoff=None, par=None, filter_misclassified=True,
+                                  no_classes=10):
+    verifier_data = {}
+    if abcrown_log_file:
+        verifier_data[ABCROWN] = {}
+        abcrown_features, abcrown_running_times, abcrown_results, abcrown_enum_results = load_abcrown_data(
+            log_path=abcrown_log_file,
+            artificial_cutoff=cutoff,
+            par=par,
+            neuron_count=neuron_count,
+            feature_collection_cutoff=feature_collection_cutoff,
+            frequency=frequency,
+            filter_misclassified=False
+        )
+        verifier_data[ABCROWN]["no_features"] = abcrown_features[frequency].shape[1]
+        verifier_data[ABCROWN]["features"] = abcrown_features
+        verifier_data[ABCROWN]["running_times"] = abcrown_running_times
+        verifier_data[ABCROWN]["results"] = abcrown_results
+        verifier_data[ABCROWN]["enum_results"] = abcrown_enum_results
+
+    if verinet_log_file:
+        verifier_data[VERINET] = {}
+        verinet_features, verinet_running_times, verinet_results, verinet_enum_results = load_verinet_data(
+            log_path=verinet_log_file,
+            artificial_cutoff=cutoff,
+            par=par,
+            neuron_count=neuron_count,
+            feature_collection_cutoff=feature_collection_cutoff,
+            frequency=frequency,
+            filter_misclassified=False,
+            no_classes=no_classes
+        )
+        verifier_data[VERINET]["no_features"] = verinet_features[frequency].shape[1]
+        verifier_data[VERINET]["features"] = verinet_features
+        verifier_data[VERINET]["running_times"] = verinet_running_times
+        verifier_data[VERINET]["results"] = verinet_results
+        verifier_data[VERINET]["enum_results"] = verinet_enum_results
+
+    if oval_log_file:
+        verifier_data[OVAL] = {}
+        oval_features, oval_running_times, oval_results, oval_enum_results = load_oval_bab_data(
+            log_path=oval_log_file,
+            artificial_cutoff=cutoff,
+            par=par,
+            neuron_count=neuron_count,
+            feature_collection_cutoff=feature_collection_cutoff,
+            frequency=frequency,
+            filter_misclassified=False
+        )
+        verifier_data[OVAL]["no_features"] = oval_features[frequency].shape[1]
+        verifier_data[OVAL]["features"] = oval_features
+        verifier_data[OVAL]["running_times"] = oval_running_times
+        verifier_data[OVAL]["results"] = oval_results
+        verifier_data[OVAL]["enum_results"] = oval_enum_results
+
+    # check that each verifier has the same number of instances
+    if not frequency:
+        no_instances = list(set([len(verifier_data[verifier]["features"]) for verifier in verifier_data]))
+    else:
+        no_instances = list(
+            set([len(verifier_data[verifier]["features"][checkpoint]) for verifier in verifier_data for checkpoint in
+                 verifier_data[verifier]["features"]]))
+    assert len(no_instances) == 1
+
+    no_instances = no_instances[0]
+    no_verifiers = len(verifier_data.keys())
+
+    # merge running_times, results, and results_to_enum
+    running_times = []
+    results = []
+    enum_results = []
+
+    # filter misclassified instances
+    # we have to do it in this way, as abCROWN has no way to detect misclassifications during runtime
+    misclassified_indices = []
+    if filter_misclassified:
+        for index in range(no_instances):
+            index_results = set([verifier_data[verifier]["results"][index] for verifier in verifier_data])
+            if "Status.Skipped" in index_results or "SKIPPED" in index_results:
+                misclassified_indices.append(index)
+
+    for index in range(no_instances):
+        if index in misclassified_indices:
+            continue
+        for verifier in verifier_data:
+            running_times.append(verifier_data[verifier]["running_times"][index])
+            results.append(verifier_data[verifier]["results"][index])
+            enum_results.append(verifier_data[verifier]["enum_results"][index])
+
+    # merge features of all verifiers together
+    if frequency:
+        if cutoff:
+            max_time = cutoff
+        else:
+            max_time = max([max(verifier_data[verifier]["features"].keys()) for verifier in verifier_data])
+
+        features = {
+            checkpoint: [np.array([]) for _ in range(no_instances * no_verifiers)]
+            for checkpoint in range(frequency, max_time, frequency)
+        }
+    else:
+        features = [np.array([]) for _ in range(no_instances * no_verifiers)]
+
+    for feature_index in range(no_instances):
+        if feature_index in misclassified_indices:
+            continue
+        if frequency:
+            for checkpoint in range(frequency, max_time, frequency):
+                merged_feature = np.array([])
+                for verifier in verifier_data:
+                    merged_feature = np.append(merged_feature,
+                                               verifier_data[verifier]["features"][checkpoint][feature_index])
+                for i in range(no_verifiers):
+                    index = feature_index * no_verifiers
+                    features[checkpoint][index + i] = np.append(merged_feature, i)
+
+        else:
+            merged_feature = np.array([])
+            for verifier in verifier_data:
+                merged_feature = np.append(merged_feature, verifier_data[verifier]["features"][feature_index])
+            for i in range(no_verifiers):
+                index = feature_index * no_verifiers
+                features[index + i] = np.append(merged_feature, i)
+
+    # remove empty arrays (misclassified indices)
+    if frequency:
+        for checkpoint in range(frequency, max_time, frequency):
+            features[checkpoint] = [feature for feature in features[checkpoint] if feature.size > 0]
+    else:
+        features = [feature for feature in features if feature.size > 0]
+
+    best_verifiers = []
+    if frequency:
+        features_best_verifiers = {
+            checkpoint: []
+            for checkpoint in range(frequency, max_time, frequency)
+        }
+    else:
+        features_best_verifiers = []
+    for index in range(int(len(running_times) / no_verifiers)):
+        instance_index = index * no_verifiers
+        if set(enum_results[instance_index:instance_index + no_verifiers]) == {2}:
+            best_verifier = -1
+        else:
+            best_verifier = np.argmin(running_times[instance_index:instance_index + no_verifiers])
+        best_verifiers.append(best_verifier)
+        if frequency:
+            for checkpoint in range(frequency, max_time, frequency):
+                features_best_verifiers[checkpoint].append(features[checkpoint][instance_index][:-1])
+        else:
+            features_best_verifiers.append(
+                features[instance_index][:-1])  # we don't need the verifier index in this case
+
+    if frequency:
+        for checkpoint in features:
+            features[checkpoint] = np.array(features[checkpoint])
+            features_best_verifiers[checkpoint] = np.array(features_best_verifiers[checkpoint])
+    else:
+        features = np.array(features)
+        features_best_verifiers = np.array(features_best_verifiers)
+
+    return features, np.array(running_times), np.array(results), np.array(
+        enum_results), features_best_verifiers, np.array(best_verifiers), verifier_data

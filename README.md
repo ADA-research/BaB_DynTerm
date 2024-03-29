@@ -1,10 +1,14 @@
 # Running Time Prediction and Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification
 
-This is the accompanying repository to the paper 
-"Running Time Prediction and Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification".
+This is the accompanying repository to the master thesis 
+"Algorithm Selection and Running Time Prediction for Branch-and-Bound-based Neural Network Verification" written by
+Konstantin Kaulen at the chair of AI Methodology (i14) at RWTH Aachen.
+
+This thesis was supervised by Prof. Dr. Holger Hoos (RWTH Aachen, Leiden University) and Matthias König M. Sc. (Leiden University).
 
 
-It includes the following modules:
+
+The repository includes the following modules:
 
 - `experiments`: Includes scripts and configuration files to rerun the experiments provided in the paper. 
 The configuration files will be explained in more detail later.
@@ -23,23 +27,30 @@ the paper.
 
 -----------------------------------------------------------------------------------------------------
 
-## Reproduction of Paper Results
+## Reproduction of Thesis Results
 Perform the following steps in a terminal. We give instructions for UNIX-based systems, but the procedure
 is very similar on Windows.
 
+Make sure to have Git LFS (https://git-lfs.com/installed) installed to obtain the original verification logs, that form 
+the basis to all conducted experiments.
+Make sure to download the verification logs by running `git lfs pull`.
+
+To setup the repository perform the following steps:
 1. Create `venv` by running `python3 -m venv ./venv` and activate it (`source ./venv/bin/activate`)
 2. Install needed dependencies
    1. `pip3 install -r requirements.txt`
+
+Then you can reproduce all experiment results by executing:
 3. Run `python3 run_all_experiments.py`
 
-After successful termination of the script, you should find three folds under `./results`
-- `results_running_time_regression` corresponding to the results presented in Appendix A
-- `results_timeout_classification` corresponding to the results presented in Section 5.1 - Fixed Feature Collection Phase
-- `results_continuous_timeout_classification` corresponding to the results presented in Section 5.1 - Continuous Feature Collection Phase
+After successful termination of the script, you should find these folders under `./results`
+- `results_running_time_regression` corresponding to the results presented in Section 5.1 - Running Time Regression
+- `results_timeout_classification` corresponding to the results presented in Section 5.2.1 - Fixed Feature Collection Phase
+- `results_continuous_timeout_classification` corresponding to the results presented in Section 5.2.2 - Continuous Feature Collection Phase
 
 These folders include plots (Scatter Plots, ECDF Plots, Confusion Matrices) as well as metrics per fold and average metrics in `metrics.json`
 (in case of different thresholds `metrics_thresh_{thresh}.json`.
-Notice, that the scatter plots provided in Figure B.1 (Appendix) are created under
+Notice, that the scatter plots provided in Figure A.1 (Appendix) are created under
 `results/running_time_regression/{experiment_name}/{verifier}/scatter_plot.pdf`.
 
 Finally, you can create the tables displayed in the paper by running `python3 create_all_tables.py`.
@@ -49,25 +60,11 @@ the paper.
 
 The mapping of the created `.csv` files to the tables in the paper is as follows:
 
-- `table_timeouts_fixed_feature_collection.csv` - Table 2
-- `table_timeouts_continuous_feature_collection.csv` - Table 3
-- `table_timeout_termination.csv` - Table 4
-
--------------------------------------------------------------------------------------------------------------
-
-## Appendix
-
-If you want to reproduce the paper results shown in the Appendix (i.e. the results for continuous timeout classification
-and termination for theta=0.8/0.9), first run the script `run_experiments_appendix.py`. As before, the `results` folder
-will then get populated with the results for the additional thresholds.
-After that, run the `create_tables_appendix.py` script and the tables shown in the appendix will get created in `tables`
-in csv format.
-
-The mapping of the created `.csv` files to the tables in the Appendix is as follows:
-
-- `table_timeouts_continuous_feature_collection_appendix.csv` - Table C.1
-- `table_timeouts_termination_appendix.csv` - Table C.2
-
+- `table_running_time_regression.csv` - Table 5.1
+- `table_timeouts_fixed_feature_collection.csv` - Table 5.2
+- `table_timeouts_continuous_feature_collection_{theta}.csv` - Table 5.3. Notice, that we create a separate
+file for each threshold shown in the Table.
+- `table_timeout_termination_{theta}.csv` - Table 5.4. Again, we crate a separate file for each threshold.
 
 --------------------------------------------------------------------------------------------------------------
  ## Experiment Configurations
@@ -78,7 +75,7 @@ If you want to run your own experiments using the presented approach, you can ad
 
 The different possibilities for adjusting the experiments will now be explained in more detail:
 
-### Running Time Prediction
+### Running Time Regression
 
 ```python
 CONFIG_RUNNING_TIME_REGRESSION = {

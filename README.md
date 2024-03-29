@@ -13,8 +13,10 @@ The repository includes the following modules:
 - `experiments`: Includes scripts and configuration files to rerun the experiments provided in the paper. 
 The configuration files will be explained in more detail later.
 - `src`: The actual source code used to train running time prediction models and to evaluate them in application
-scenarios such as predicting running times using regression models or prematurely terminating unsolvable instances
-in order to save compute resources. The `src` module contains the following submodules:
+scenarios such as predicting running times using regression models,prematurely terminating unsolvable instances or
+to select the best-performing algorithm on a per-instance basis.
+The `src` module contains the following submodules:
+    - `algorithm_selection`:  Code to evaluate our feature's capabilities in tackling the algorithm selection task.
     - `eval`: Code to evaluate experiment results using several metrics. 
     - `parsers` Code to obtain feature values by parsing log files of the examined verification tools.
     - `running_time_prediction`: Code to evaluate our feature's capabilities in the context of running time 

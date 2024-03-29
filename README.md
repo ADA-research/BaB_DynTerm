@@ -33,7 +33,7 @@ the paper.
 Perform the following steps in a terminal. We give instructions for UNIX-based systems, but the procedure
 is very similar on Windows.
 
-Make sure to have Git LFS (https://git-lfs.com/installed) installed to obtain the original verification logs, that form 
+Make sure to have Git LFS (https://git-lfs.com/installed) installed to obtain the original verification logs that form 
 the basis to all conducted experiments.
 Make sure to download the verification logs by running `git lfs pull`.
 

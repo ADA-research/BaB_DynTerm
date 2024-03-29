@@ -42,8 +42,7 @@ To setup the repository perform the following steps:
 2. Install needed dependencies
    1. `pip3 install -r requirements.txt`
 
-Then you can reproduce all experiment results by executing:
-3. Run `python3 run_all_experiments.py`
+Then you can reproduce all experiment results by executing `python3 run_all_experiments.py`.
 
 After successful termination of the script, you should find these folders under `./results`
 - `results_running_time_regression` corresponding to the results presented in Section 5.1 - Running Time Regression

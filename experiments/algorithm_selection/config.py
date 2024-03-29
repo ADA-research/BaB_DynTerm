@@ -3,7 +3,7 @@ CONFIG_ADAPTIVE_ALGORITHM_SELECTION = {
     "ABCROWN_LOG_NAME": "abCROWN.log",
     "OVAL_BAB_LOG_NAME": "OVAL-BAB.log",
     "VERINET_LOG_NAME": "VERINET.log",
-    "RESULTS_PATH": "./results/results_adaptive_algorithm_selection",
+    "RESULTS_PATH": "./results/results_dynamic_algorithm_selection",
     # If empty, use all folders in ./verification_logs
     "INCLUDED_EXPERIMENTS": [],
     "ALGORITHM_SELECTION_FREQUENCY": 10,

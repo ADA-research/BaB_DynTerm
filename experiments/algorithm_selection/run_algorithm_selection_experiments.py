@@ -32,6 +32,9 @@ def run_algorithm_selection_experiment_from_config(config: dict):
     os.makedirs(results_path, exist_ok=True)
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         verifiers = SUPPORTED_VERIFIERS.copy()
 
         experiment_results_path = os.path.join(results_path, experiment)

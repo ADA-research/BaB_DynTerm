@@ -34,6 +34,9 @@ def run_timeout_prediction_experiment(config: dict):
     random_state = config.get("RANDOM_STATE")
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
@@ -118,6 +121,9 @@ def run_continuous_timeout_prediction_experiment(config: dict):
     random_state = config.get("RANDOM_STATE", 42)
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
@@ -202,6 +208,9 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
     cutoff = config.get("MAX_RUNNING_TIME", 600)
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
@@ -262,6 +271,6 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 
 if __name__ == "__main__":
-    run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
-    # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
+    # run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

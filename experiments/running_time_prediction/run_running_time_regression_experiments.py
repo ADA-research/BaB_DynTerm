@@ -53,6 +53,9 @@ def run_experiments_from_config(config):
     os.makedirs(results_path, exist_ok=True)
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)

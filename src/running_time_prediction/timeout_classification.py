@@ -70,7 +70,7 @@ def train_timeout_classifier_random_forest(training_inputs, running_times, resul
 
         print(f"---------------------------------- Fold {fold} ----------------------------------")
 
-        rf_classifier = RandomForestClassifier(n_estimators=200, random_state=random_state)
+        rf_classifier = RandomForestClassifier(n_estimators=200, random_state=random_state, n_jobs=10)
         rf_classifier.fit(train_inputs, train_labels_sat)
 
         probability_predictions = rf_classifier.predict_proba(test_inputs)

@@ -24,7 +24,6 @@ def run_timeout_prediction_experiment(config: dict):
         experiments = os.listdir(verification_logs_path)
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
-    feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
 
     results_path = config.get("RESULTS_PATH", "./results_running_time_prediction")
     os.makedirs(results_path, exist_ok=True)
@@ -271,6 +270,6 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 
 if __name__ == "__main__":
-    # run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
-    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
+    # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

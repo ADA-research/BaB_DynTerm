@@ -92,6 +92,7 @@ def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels
 
     # Display the plot
     plt.savefig(filename)
+    plt.close()
 
 
 def create_confusion_matrix(predictions, labels, filename="./confusion_matrix.png"):

@@ -6,6 +6,63 @@ ABCROWN = "ABCROWN"
 VERINET = "VERINET"
 OVAL = "OVAL-BAB"
 
+ABCROWN_FEATURE_NAMES = [
+    "PGD Margin",
+    "CROWN Global Bound",
+    "aCROWN Global Bound",
+    "No. Unstable Neurons",
+    "Percentage Unstable Neurons",
+    "Prediction Margin",
+    "Positive Domain Ratio",
+    "No. of Domains",
+    "No. of visited Domains",
+    "BaB Lower Bound",
+    "Worst Bound Depth",  # TODO: Has to be replaced
+    "BaB Round",
+    "Time since last batch",
+    "Time taken for last batch"
+]
+
+# TODO: What is about adversarial attack margin??
+OVAL_FEATURE_NAMES = [
+    "No. Batches",
+    "Time since last Batch",
+    "Prediction Margin",
+    "Initial Bound Min",
+    "Initial Bound Max",
+    "Improved Bound Min",
+    "Improved Bound Max",
+    "No. Unstables",
+    "Percentage Unstables",
+    "BaB Cur Global Lower Bound",
+    "BaB Cur Global Upper Bound",
+    "No. of visited domains",
+    "Cur. No. of Domains",
+    "Cur No. of Hard Domains",
+    "No. of infeasible nodes",
+    "Improvement Margin",
+    "Tree Depth Min",
+    "Tree Depth Max",
+    "Time needed for Split",
+    "Time needed for Branching"
+]
+
+VERINET_FEATURE_NAMES = [
+    "Attack Margin",
+    "One Shot Global Bound Min",
+    "One Shot Global Bound Max",
+    "One Shot Percentage Safe Constraints",
+    "No. of Unstables",
+    "Percentage of Unstables",
+    "Prediction Margin",
+    "Positive Domain Ratio",
+    "No. of Domains",
+    "No. of visited Domains",
+    "BaB Lower Bound",
+    "Tree Depth",
+    "Time since last report"
+]
+
 SUPPORTED_VERIFIERS = [
     ABCROWN,
     VERINET,

@@ -4,6 +4,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
+import shap.utils
 from matplotlib import pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
@@ -111,7 +112,7 @@ def get_shapley_values_for_timeout_classification(config):
                                                                   verifier=verifier)
 
 
-def eval_final_shapley_values(shapley_values_per_fold, results_path):
+def eval_final_shapley_values(shapley_values_per_fold, results_path, train_features, labels):
     plt.rcParams.update({'font.family': 'serif', 'font.serif': 'Times New Roman'})
     for fold, shapley_values in enumerate(shapley_values_per_fold):
         beeswarm(
@@ -251,8 +252,12 @@ def train_timeout_classifier_with_shapley_explanation(training_inputs, running_t
                                       feature_collection_cutoff=feature_collection_cutoff,
                                       running_times_timeout_prediction=timeout_running_times)
 
-    eval_final_shapley_values(shapley_values_per_fold=shapley_values, results_path=results_path)
+    eval_final_shapley_values(shapley_values_per_fold=shapley_values, results_path=results_path, train_features=training_inputs, labels=sat_timeout_labels)
+
+
+def eval_shapley_values():
 
 
 if __name__ == "__main__":
-    get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    # get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    eval_shapley_values()

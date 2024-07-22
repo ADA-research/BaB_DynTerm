@@ -274,6 +274,9 @@ def run_feature_ablation_study_timeout_classification(config):
 
     random_state = config.get("RANDOM_STATE", 42)
 
+    args_queue = multiprocessing.Queue()
+
+
     for experiment in experiments:
         print(f"------------------------ Experiment {experiment} -----------------------------")
         # skip hidden files
@@ -331,16 +334,33 @@ def run_feature_ablation_study_timeout_classification(config):
                 else:
                     # This should never happen!
                     assert 0, "Encountered Unknown Verifier!"
+                args_queue.put((features, running_times, verifier_results_path, np.log10(feature_collection_cutoff), enum_results, include_incomplete_results, threshold, random_state, verifier))
+                # train_timeout_classifier_feature_ablation(training_inputs=features, running_times=running_times,
+                #                                           verification_results=enum_results,
+                #                                           threshold=threshold,
+                #                                           include_incomplete_results=include_incomplete_results,
+                #                                           results_path=verifier_results_path,
+                #                                           feature_collection_cutoff=np.log10(
+                #                                               feature_collection_cutoff),
+                #                                           random_state=random_state,
+                #                                           verifier=verifier)
 
-                train_timeout_classifier_feature_ablation(training_inputs=features, running_times=running_times,
-                                                          verification_results=enum_results,
-                                                          threshold=threshold,
-                                                          include_incomplete_results=include_incomplete_results,
-                                                          results_path=verifier_results_path,
-                                                          feature_collection_cutoff=np.log10(
-                                                              feature_collection_cutoff),
-                                                          random_state=random_state,
-                                                          verifier=verifier)
+    procs = [multiprocessing.Process(target=train_timeout_classifier_feature_ablation_worker, args=(args_queue, ))
+             for _ in range(10)]
+    for p in procs:
+        p.daemon = True
+        p.start()
+
+    [p.join() for p in procs]
+
+
+
+def train_timeout_classifier_feature_ablation_worker(args_queue):
+    while True:
+        args = args_queue.get()
+        if args is None:
+            break
+        train_timeout_classifier_feature_ablation(*args)
 
 
 def eval_feature_ablation_study(feature_ablation_study_folder, standard_results_folder, threshold=0.5):
@@ -359,6 +379,7 @@ def eval_feature_ablation_study(feature_ablation_study_folder, standard_results_
                 feature_differences = defaultdict(float)
                 if not os.path.exists(
                         f"./{standard_results_folder}/{experiment}/{verifier}/metrics_thresh_{threshold}.json"):
+                    table_csv += "-,-,"
                     continue
                 with open(f"./{standard_results_folder}/{experiment}/{verifier}/metrics_thresh_{threshold}.json",
                           "r") as f:
@@ -558,7 +579,7 @@ def get_correlated_features(config):
         feature_collection_cutoff = experiment_info.get("first_classification_at",
                                                         config.get("FEATURE_COLLECTION_CUTOFF", 10))
 
-        for verifier in SUPPORTED_VERIFIERS:
+        for verifier in [ABCROWN]:
             print(f"----------------- {verifier} -------------------")
             if verifier == ABCROWN:
                 abcrown_log_file = os.path.join(experiment_logs_path,
@@ -602,23 +623,22 @@ def get_correlated_features(config):
             for i in range(n):
                 feature_correlated = False
                 for j in range(i + 1, n):
-                    if abs(corr_matrix[i, j]) > 0.9:
-                        # print(f"CORRELATED FEATURES: {feature_names[i]}, {feature_names[j]}: {corr_matrix[i, j]}")
+                    if abs(corr_matrix[i, j]) > 0.8:
+                        print(f"CORRELATED FEATURES: {feature_names[i]}, {feature_names[j]}: {corr_matrix[i, j]}")
                         feature_correlated = True
                         correlated_features.add(feature_names[i])
-                if not feature_correlated:
-                    print(f"UNCORRELATED FEATURE: {feature_names[i]}")
+                # if not feature_correlated:
+                    # print(f"UNCORRELATED FEATURE: {feature_names[i]}")
     for feature_names in [ABCROWN_FEATURE_NAMES, VERINET_FEATURE_NAMES, OVAL_FEATURE_NAMES]:
         print(f"Correlated features: {set.intersection(correlated_features, feature_names)}")
         print(f"Uncorrelated features: {set(feature_names) - correlated_features}")
 
 
-
 if __name__ == "__main__":
-    # run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
-    eval_feature_ablation_study(
-        feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
-        standard_results_folder="./results/results_timeout_classification/",
-        threshold=0.5
-    )
-    # get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)
+    # run_feature_ablation_study_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    # eval_feature_ablation_study(
+    #     feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
+    #     standard_results_folder="./results/results_timeout_classification/",
+    #     threshold=0.5
+    # )
+    get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)

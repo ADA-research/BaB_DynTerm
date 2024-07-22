@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 from pathlib import Path
 
@@ -119,6 +120,8 @@ def run_continuous_timeout_prediction_experiment(config: dict):
 
     random_state = config.get("RANDOM_STATE", 42)
 
+    args_queue = multiprocessing.Queue()
+
     for experiment in experiments:
         # skip hidden files
         if experiment.startswith("."):
@@ -162,14 +165,28 @@ def run_continuous_timeout_prediction_experiment(config: dict):
                     assert 0, "Encountered Unknown Verifier!"
 
                 print(f"-------------------------- {experiment} -------------------")
-                train_continuous_timeout_classifier(log_path=log_path, load_data_func=load_data_func,
-                                                    neuron_count=experiment_neuron_count,
-                                                    include_incomplete_results=include_incomplete_results,
-                                                    results_path=verifier_results_path, threshold=threshold,
-                                                    classification_frequency=classification_frequency, cutoff=cutoff,
-                                                    first_classification_at=first_classification_at,
-                                                    no_classes=no_classes,
-                                                    random_state=random_state)
+                args = (
+                    log_path, load_data_func, experiment_neuron_count, include_incomplete_results,
+                    verifier_results_path,
+                    threshold,
+                    classification_frequency, cutoff, first_classification_at, no_classes, random_state)
+                args_queue.put(args)
+
+    procs = [multiprocessing.Process(target=train_continuous_timeout_classifier_worker, args=(args_queue,))
+             for _ in range(10)]
+    for p in procs:
+        p.daemon = True
+        p.start()
+
+    [p.join() for p in procs]
+
+
+def train_continuous_timeout_classifier_worker(args_queue):
+    while True:
+        args = args_queue.get()
+        if args is None:
+            break
+        train_continuous_timeout_classifier(*args)
 
 
 def run_timeout_classification_experiments_from_config(config: dict):

@@ -20,14 +20,19 @@ def get_shapley_explanation(rf_model, X_test, X_train, test_running_times, featu
         feature_names = OVAL_FEATURE_NAMES
     explainer = shap.TreeExplainer(rf_model, model_output="probability", feature_names=feature_names, data=X_train, feature_perturbation="interventional")
     explanation = explainer(X_test, check_additivity=True)
+    shapley_values = explanation.abs.mean(0).values
+    if len(shapley_values.shape) > 1:
+        shapley_values = shapley_values[:, 1]
+        shapley_values_per_instance = explanation[:, :, 1]
+    else:
+        shapley_values_per_instance = explanation[:, :]
     shapley_dict = {
         feature: shap_value
-        for feature, shap_value in zip(feature_names, explanation.abs.mean(0).values[:, 1])
+        for feature, shap_value in zip(feature_names, shapley_values)
     }
-    shapley_values_per_instance = explanation[:, :, 1],
     beeswarm(
         # only choose explanation for TIMEOUT class (which is symmetrical with no timeout class)
-        shap_values=explanation[:, :, 1],
+        shap_values=shapley_values_per_instance,
         show=False,
         max_display=100,
         plot_size=(25, 25)

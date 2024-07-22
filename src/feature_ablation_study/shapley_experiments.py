@@ -232,7 +232,7 @@ def train_timeout_classifier_with_shapley_explanation(training_inputs, running_t
         sat_timeout_labels_shuffled = np.append(sat_timeout_labels_shuffled, sat_timeout_labels[test_index])
         running_time_labels_shuffled = np.append(running_time_labels_shuffled,
                                                  running_time_training_outputs[test_index])
-        shapley_values.append(shapley_values_per_instance[0])
+        shapley_values.append(shapley_values_per_instance)
 
 
     timeout_running_times = []
@@ -255,9 +255,6 @@ def train_timeout_classifier_with_shapley_explanation(training_inputs, running_t
     eval_final_shapley_values(shapley_values_per_fold=shapley_values, results_path=results_path, train_features=training_inputs, labels=sat_timeout_labels)
 
 
-def eval_shapley_values():
-
 
 if __name__ == "__main__":
-    # get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
-    eval_shapley_values()
+    get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)

@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import glob
+
 from src.parsers.parse_ab_crown_log import parse_abcrown_log
 from src.parsers.parse_oval_log import parse_oval_log
 from src.parsers.parse_verinet_log import parse_verinet_log
@@ -24,6 +26,15 @@ def fix_image_ids_in_logs_oval(log_string):
             fixed_string += line + '\n'
 
     return fixed_string
+
+
+def fix_image_ids_in_all_oval_logs():
+    for log_file in glob.glob("./verification_logs/*/OVAL-BAB.log"):
+        print(log_file)
+        log_string = load_log_file(log_file)
+        fixed_string = fix_image_ids_in_logs_oval(log_string)
+        with open(log_file, "w", encoding='u8') as f:
+            f.write(fixed_string)
 
 
 def fix_image_ids_in_logs_verinet(log_string):
@@ -96,8 +107,10 @@ def sanity_check(experiment_dict):
 
 
 if __name__ == "__main__":
-    verinet_log_file_path = "./bab_features/verification_logs/CIFAR_RESNET_2B/VERINET.log"
-    log_string = load_log_file(verinet_log_file_path)
-    fixed_string = fix_image_ids_in_logs_verinet(log_string)
-    with open(verinet_log_file_path, "w", encoding='u8') as f:
-        f.write(fixed_string)
+    fix_image_ids_in_all_oval_logs()
+    #
+    # verinet_log_file_path = "./bab_features/verification_logs/CIFAR_RESNET_2B/VERINET.log"
+    # log_string = load_log_file(verinet_log_file_path)
+    # fixed_string = fix_image_ids_in_logs_verinet(log_string)
+    # with open(verinet_log_file_path, "w", encoding='u8') as f:
+    #     f.write(fixed_string)

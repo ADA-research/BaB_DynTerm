@@ -17,7 +17,7 @@ ABCROWN_FEATURE_NAMES = [
     "No. of Domains",
     "No. of visited Domains",
     "BaB Lower Bound",
-    "Worst Bound Depth",  # TODO: Has to be replaced
+    "Tree Depth",  # TODO: Has to be replaced
     "BaB Round",
     "Time since last batch",
     "Time taken for last batch"

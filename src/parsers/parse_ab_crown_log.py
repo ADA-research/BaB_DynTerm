@@ -69,7 +69,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         last_checkpoint_passed = 0
         min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables, \
             percentage_unstables, prediction_margin, positive_domain_ratio, domain_length, bab_lower_bound, \
-            visited_domains, worst_bound_depth, bab_round, time_since_last_batch, \
+            visited_domains, tree_depth, bab_round, time_since_last_batch, \
             time_taken_for_last_batch = [-np.inf] * 14
         bab_start_time, cumulative_time = None, None
         index_number = -1
@@ -103,7 +103,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                             cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound,
                                             no_unstables, percentage_unstables, prediction_margin,
                                             positive_domain_ratio, domain_length, visited_domains, bab_lower_bound,
-                                            worst_bound_depth, bab_round, time_since_last_batch,
+                                            tree_depth, bab_round, time_since_last_batch,
                                             time_taken_for_last_batch]
                         else:
                             cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound,
@@ -217,13 +217,11 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     bab_lower_bound = float(match.group())
                     # print("BAB LOWER BOUND", bab_lower_bound)
 
-            if "Current worst splitting domains" in line:
-                domain_line = lines[index + 1]
-                worst_domain = domain_line.split(",")[0]
-                match = re.search(r"\((\d+)\)", worst_domain)
+            if "Tree Depth" in line:
+                match = re.search(r"(\d+)", line)
 
                 if match:
-                    worst_bound_depth = int(match.group(1))
+                    tree_depth = int(match.group(1))
                     # print("BAB LOWER BOUND", bab_lower_bound)
             if "BaB round" in line:
                 match = re.search(r"(\d+)", line)
@@ -243,7 +241,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
             if include_bab_features:
                 cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables,
                                 percentage_unstables, prediction_margin, positive_domain_ratio, domain_length,
-                                visited_domains, bab_lower_bound, worst_bound_depth, bab_round, time_since_last_batch,
+                                visited_domains, bab_lower_bound, tree_depth, bab_round, time_since_last_batch,
                                 time_taken_for_last_batch]
             else:
                 cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables,

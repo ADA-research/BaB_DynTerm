@@ -201,6 +201,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     domain_length = int(match.group(1))
                     # print("DOMAIN LENGTH", domain_length)
 
+            # TODO: MAYBE CHANGE THAT TO PERCENTAGE OF VISITED DOMAINS
             if "domains visited" in line:
                 pattern = r'(\d+) domains visited'
                 match = re.search(pattern, line)

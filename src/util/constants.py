@@ -17,7 +17,7 @@ ABCROWN_FEATURE_NAMES = [
     "No. of Domains",
     "No. of visited Domains",
     "BaB Lower Bound",
-    "Tree Depth",  # TODO: Has to be replaced
+    "Tree Depth",
     "BaB Round",
     "Time since last batch",
     "Time taken for last batch"
@@ -41,8 +41,7 @@ OVAL_FEATURE_NAMES = [
     "Cur No. of Hard Domains",
     "No. of infeasible nodes",
     "Improvement Margin",
-    "Tree Depth Min",
-    "Tree Depth Max",
+    "Tree Depth",
     "Time needed for Split",
     "Time needed for Branching"
 ]
@@ -51,7 +50,7 @@ VERINET_FEATURE_NAMES = [
     "Attack Margin",
     "One Shot Global Bound Min",
     "One Shot Global Bound Max",
-    "One Shot Percentage Safe Constraints",
+    "Percentage Safe Constraints",
     "No. of Unstables",
     "Percentage of Unstables",
     "Prediction Margin",

@@ -42,6 +42,7 @@ def run_timeout_prediction_experiment(config: dict):
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
         assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
         experiment_neuron_count = experiment_info.get("neuron_count")
+        no_classes = experiment_info.get("no_classes", 10)
         assert experiment_neuron_count
         os.makedirs(experiment_results_path, exist_ok=True)
 
@@ -61,7 +62,8 @@ def run_timeout_prediction_experiment(config: dict):
                     features, running_times, results, enum_results = load_abcrown_data(
                         abcrown_log_file,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        neuron_count=experiment_neuron_count
+                        neuron_count=experiment_neuron_count,
+                        no_classes=no_classes,
                     )
                 elif verifier == VERINET:
                     verinet_log_file = os.path.join(experiment_logs_path, config.get("VERINET_LOG_NAME", "VERINET.log"))
@@ -72,7 +74,8 @@ def run_timeout_prediction_experiment(config: dict):
                         verinet_log_file,
                         neuron_count=experiment_neuron_count,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        filter_misclassified=True
+                        filter_misclassified=True,
+                        no_classes=no_classes
                     )
                 elif verifier == OVAL:
                     oval_log_file = os.path.join(experiment_logs_path, config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
@@ -82,7 +85,8 @@ def run_timeout_prediction_experiment(config: dict):
                     features, running_times, results, enum_results = load_oval_bab_data(oval_log_file,
                                                                                         neuron_count=experiment_neuron_count,
                                                                                         feature_collection_cutoff=feature_collection_cutoff,
-                                                                                        filter_misclassified=True)
+                                                                                        filter_misclassified=True,
+                                                                                        no_classes=no_classes)
                 else:
                     # This should never happen!
                     assert 0, "Encountered Unknown Verifier!"
@@ -176,6 +180,8 @@ def run_continuous_timeout_prediction_experiment(config: dict):
              for _ in range(10)]
     for p in procs:
         p.daemon = True
+        # poison pills
+        args_queue.put(None)
         p.start()
 
     [p.join() for p in procs]
@@ -287,6 +293,6 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 
 if __name__ == "__main__":
-    run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

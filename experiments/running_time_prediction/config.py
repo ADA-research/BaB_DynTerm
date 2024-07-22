@@ -6,7 +6,7 @@ CONFIG_RUNNING_TIME_REGRESSION = {
     "RESULTS_PATH": "./results/results_running_time_regression",
     "INCLUDED_EXPERIMENTS": [],
     # If empty, use all folders in ./verification_logs
-    "FEATURE_COLLECTION_CUTOFF": 20,
+    "FEATURE_COLLECTION_CUTOFF": 10,
     "MAX_RUNNING_TIME": 600,
     "INCLUDE_TIMEOUTS": True,
     "INCLUDE_INCOMPLETE_RESULTS": True,
@@ -38,17 +38,17 @@ CONFIG_RUNNING_TIME_REGRESSION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 20
+            "first_classification_at": 10
         }
     }
 }
@@ -61,7 +61,7 @@ CONFIG_TIMEOUT_CLASSIFICATION = {
     "RESULTS_PATH": "./results/results_timeout_classification",
     # If empty, use all folders in ./verification_logs
     "INCLUDED_EXPERIMENTS": [],
-    "FEATURE_COLLECTION_CUTOFF": 20,
+    "FEATURE_COLLECTION_CUTOFF": 10,
     "INCLUDE_INCOMPLETE_RESULTS": True,
     "TIMEOUT_CLASSIFICATION_THRESHOLDS": [0.5, 0.99],
     "RANDOM_STATE": 42,
@@ -92,17 +92,17 @@ CONFIG_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 20
+            "first_classification_at": 10
         }
     }
 }
@@ -148,17 +148,17 @@ CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 20
+            "first_classification_at": 10
         }
     }
 }

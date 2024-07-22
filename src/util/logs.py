@@ -1,3 +1,4 @@
+import os.path
 from collections import defaultdict
 
 import glob
@@ -6,7 +7,7 @@ from src.parsers.parse_ab_crown_log import parse_abcrown_log
 from src.parsers.parse_oval_log import parse_oval_log
 from src.parsers.parse_verinet_log import parse_verinet_log
 from src.util.io import load_log_file
-from src.util.constants import result_to_enum, SAT, TIMEOUT, UNSAT, ABCROWN, VERINET, OVAL
+from src.util.constants import result_to_enum, SAT, TIMEOUT, UNSAT, ABCROWN, VERINET, OVAL, SUPPORTED_VERIFIERS
 
 
 def fix_image_ids_in_logs_oval(log_string):
@@ -59,7 +60,7 @@ def fix_image_ids_in_logs_verinet(log_string):
     return fixed_string
 
 
-def sanity_check(experiment_dict):
+def sanity_check():
     """
     Function to perform a sanity check across different verifiers, i.e. checking if they all come to the same verification
     solution per instance
@@ -73,16 +74,16 @@ def sanity_check(experiment_dict):
             }
         }
     """
-    for experiment_name, verifier_dict in experiment_dict.items():
+    for experiment_name in os.listdir("./verification_logs/"):
         print(f"EXPERIMENT {experiment_name}")
         return_dict = defaultdict(dict)
-        for verifier, log_path in verifier_dict.items():
+        for verifier in SUPPORTED_VERIFIERS:
             if verifier == ABCROWN:
-                running_time_dict = parse_abcrown_log(load_log_file(log_path))
+                running_time_dict = parse_abcrown_log(load_log_file(f"./verification_logs/{experiment_name}/abCROWN.log"))
             elif verifier == VERINET:
-                running_time_dict = parse_verinet_log(load_log_file(log_path))
+                running_time_dict = parse_verinet_log(load_log_file(f"./verification_logs/{experiment_name}/VERINET.log"))
             elif verifier == OVAL:
-                running_time_dict = parse_oval_log(load_log_file(log_path))
+                running_time_dict = parse_oval_log(load_log_file(f"./verification_logs/{experiment_name}/OVAL-BAB.log"))
             else:
                 assert False, "Unsupported Verifier!"
 
@@ -107,7 +108,7 @@ def sanity_check(experiment_dict):
 
 
 if __name__ == "__main__":
-    fix_image_ids_in_all_oval_logs()
+    sanity_check()
     #
     # verinet_log_file_path = "./bab_features/verification_logs/CIFAR_RESNET_2B/VERINET.log"
     # log_string = load_log_file(verinet_log_file_path)

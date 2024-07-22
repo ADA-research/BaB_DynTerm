@@ -95,11 +95,12 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         last_checkpoint_passed = 0
         min_attack_margin, one_shot_global_bound_min, one_shot_global_max, no_unstables, percentage_unstables, \
             prediction_margin, positive_domain_ratio, total_branches, explored_branches, \
-            bab_cur_lower_bound, tree_depth, one_shot_safe_percentage, time_since_last_report = [np.inf] + [
+            bab_cur_lower_bound, tree_depth, safe_constraints_percentage, time_since_last_report = [np.inf] + [
             -np.inf] * 12
         index_number = -1
         lines = instance_lines.splitlines()
         current_time = 0
+        last_report_time = None
         for index, line in enumerate(lines):
             if "#######################################################" in line:
                 pattern = r"(\d+) #######################################################"
@@ -111,7 +112,9 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     # print(f"Index: {index_number}")
                     times_up = False
 
-            # this has to happen before time cutoff because it may happen after BaB (probably because of missing print flush)
+            if times_up or index_number < 0:
+                continue
+
             if "Margin between highest and 2nd highest prediciton" in line:
                 pattern = r'-?\d+\.\d+'
                 match = re.search(pattern, line)
@@ -120,10 +123,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     prediction_margin = float(match.group())
                     # print("Prediction Margin", prediction_margin)
 
-            if times_up:
-                continue
-
-            if "ELAPSED TIME:" in line:
+            if "Elapsed time:" in line:
                 pattern = r'-?\d+\.\d+'
                 match = re.search(pattern, line)
 
@@ -132,23 +132,22 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     if abs(current_time - float(match.group())) > 60:
                         continue
                     current_time = float(match.group())
-                    if frequency:
-                        time_since_last_report = math.ceil(current_time / frequency) * frequency - current_time
-                    elif not (bab_feature_cutoff < current_time < bab_feature_cutoff + 10):
-                        time_since_last_report = bab_feature_cutoff - current_time
+                    if last_report_time:
+                        time_since_last_report = current_time - last_report_time
+
 
                     # Hack that is needed because in log the last BaB Log can occur after Instance has changed to new one
                     if frequency:
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         cur_features = [min_attack_margin,
-                                        one_shot_global_bound_min, one_shot_global_max, one_shot_safe_percentage,
+                                        one_shot_global_bound_min, one_shot_global_max, safe_constraints_percentage,
                                         no_unstables, percentage_unstables, prediction_margin, positive_domain_ratio,
                                         total_branches, explored_branches, bab_cur_lower_bound, tree_depth,
                                         time_since_last_report]
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
 
-                    elif bab_feature_cutoff < current_time < bab_feature_cutoff + 10:
+                    elif current_time > bab_feature_cutoff:
                         times_up = True
 
             if "Max Attack Margin:" in line:
@@ -171,11 +170,20 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 if match:
                     array_str = match.group(1)
 
-                    one_shot_safe_constraints = [int(num) for num in re.split(r',\s*', array_str)]
+                    safe_constraints = [int(num) for num in re.split(r',\s*', array_str)]
 
                     # print("One-Shot Safe constraints:", one_shot_safe_constraints)
-                    one_shot_safe_percentage = len(one_shot_safe_constraints) / (no_classes - 1)
-                    # print("Safe Percentage:", one_shot_safe_percentage)
+                    safe_constraints_percentage = len(safe_constraints) / (no_classes - 1)
+                    # print("Safe Percentage:", safe_constraints_percentage)
+
+            if "NO OF SAFE CONSTRAINTS" in line:
+                pattern = r'(\d+)'
+                match = re.search(pattern, line)
+
+                if match:
+                    no_safe_constraints = int(match.group())
+                    safe_constraints_percentage = no_safe_constraints / (no_classes - 1)
+
 
             if "Impact Score" in line:
                 exponent_pattern = r"[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?"
@@ -233,21 +241,24 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     positive_domain_ratio = float(match.group())
                     # print("RATIO", positive_domain_ratio)
 
-            if "Total Branches:" in line:
+            if "TOTAL BRANCHES:" in line:
                 pattern = r'(\d+)'
                 match = re.search(pattern, line)
                 if match:
+                    # First metric in report is TOTAL BRANCHES, so we record that time
+                    last_report_time = current_time
                     total_branches = int(match.group(1))
                     # print("total branches", total_branches)
 
-            if "Explored Branches:" in line:
+            # TODO: MAYBE CHANGE THAT TO PERCENTAGE OF EXPLORED BRANCHES
+            if "EXPLORED BRANCHES:" in line:
                 pattern = r'(\d+)'
                 match = re.search(pattern, line)
                 if match:
                     explored_branches = int(match.group(1))
                     # print("explored branches", explored_branches)
 
-            if "Depth of Tree:" in line:
+            if "DEPTH OF TREE" in line:
                 pattern = r'(\d+)'
                 match = re.search(pattern, line)
                 if match:
@@ -262,7 +273,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     # print("BAB CUR LOWER BOUND", bab_cur_lower_bound)
 
         if index_number >= 0:
-            cur_features = [min_attack_margin, one_shot_global_bound_min, one_shot_global_max, one_shot_safe_percentage,
+            cur_features = [min_attack_margin, one_shot_global_bound_min, one_shot_global_max, safe_constraints_percentage,
                             no_unstables, percentage_unstables, prediction_margin, positive_domain_ratio,
                             total_branches, explored_branches, bab_cur_lower_bound, tree_depth, time_since_last_report]
             if frequency:
@@ -291,7 +302,11 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
 
 if __name__ == "__main__":
-    log_file = load_log_file("./verification_logs/OVAL21/VERINET.log")
-    features = get_features_from_verification_log(log_file, frequency=None, total_neuron_count=600,
-                                                  bab_feature_cutoff=35)
-    print(features)
+    import glob
+    for log_file in glob.glob('./verification_logs/*/VERINET.log'):
+        get_features_from_verification_log(
+            load_log_file(log_file),
+            no_classes=10,
+            frequency=10,
+            total_neuron_count=100000
+        )

@@ -240,6 +240,7 @@ def run_feature_ablation_study_continuous_timeout_classification(config):
              for _ in range(10)]
     for p in procs:
         p.daemon = True
+        args_queue.put(None)
         p.start()
 
     [p.join() for p in procs]
@@ -349,6 +350,7 @@ def run_feature_ablation_study_timeout_classification(config):
              for _ in range(10)]
     for p in procs:
         p.daemon = True
+        args_queue.put(None)
         p.start()
 
     [p.join() for p in procs]
@@ -578,8 +580,9 @@ def get_correlated_features(config):
 
         feature_collection_cutoff = experiment_info.get("first_classification_at",
                                                         config.get("FEATURE_COLLECTION_CUTOFF", 10))
+        feature_collection_cutoff = 60
 
-        for verifier in [ABCROWN]:
+        for verifier in SUPPORTED_VERIFIERS:
             print(f"----------------- {verifier} -------------------")
             if verifier == ABCROWN:
                 abcrown_log_file = os.path.join(experiment_logs_path,
@@ -635,10 +638,10 @@ def get_correlated_features(config):
 
 
 if __name__ == "__main__":
-    # run_feature_ablation_study_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
-    # eval_feature_ablation_study(
-    #     feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
-    #     standard_results_folder="./results/results_timeout_classification/",
-    #     threshold=0.5
-    # )
-    get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_feature_ablation_study_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    eval_feature_ablation_study(
+        feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
+        standard_results_folder="./results/results_timeout_classification/",
+        threshold=0.5
+    )
+    # get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)

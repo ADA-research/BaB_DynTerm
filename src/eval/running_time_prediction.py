@@ -244,11 +244,15 @@ def eval_final_timeout_classification(predictions, verification_results, timeout
         sum_metrics["tn"] += fold_metrics["tn"]
         sum_metrics["fn"] += fold_metrics["fn"]
 
-    sum_metrics["tpr"] = sum_metrics["tp"] / (sum_metrics["tp"] + sum_metrics["fn"])
-    sum_metrics["tnr"] = sum_metrics["tn"] / (sum_metrics["tn"] + sum_metrics["fp"])
-    sum_metrics["fpr"] = sum_metrics["fp"] / (sum_metrics["fp"] + sum_metrics["tn"])
-    sum_metrics["fnr"] = sum_metrics["fn"] / (sum_metrics["fn"] + sum_metrics["tp"])
-    metrics["sum"] = sum_metrics
+    try:
+        sum_metrics["tpr"] = sum_metrics["tp"] / (sum_metrics["tp"] + sum_metrics["fn"])
+        sum_metrics["tnr"] = sum_metrics["tn"] / (sum_metrics["tn"] + sum_metrics["fp"])
+        sum_metrics["fpr"] = sum_metrics["fp"] / (sum_metrics["fp"] + sum_metrics["tn"])
+        sum_metrics["fnr"] = sum_metrics["fn"] / (sum_metrics["fn"] + sum_metrics["tp"])
+        metrics["sum"] = sum_metrics
+    except ZeroDivisionError as e:
+        metrics["sum"] = {}
+        print("ZERO DIVISION ERROR DURING SUM CALCULATION!")
 
     # this could be so easy, but unfortunately we have to deal with potentially undefined metrics!
     no_observations_per_metric = {}

@@ -174,7 +174,10 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     percentage_unstables = no_unstables / total_neuron_count
                     # print("Percentage Unstables", percentage_unstables)
             if "Model prediction is:" in line:
-                line = line + lines[index + 1] + lines[index + 2]
+                i = 1
+                while 'device' not in line:
+                    line = line + lines[index + i]
+                    i += 1
                 pattern = r'tensor\(\[\s*(.*?)\s*\],\s*device'
                 match = re.search(pattern, line)
 

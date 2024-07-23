@@ -76,7 +76,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         times_up = False
         batch_start_time = None
         last_checkpoint_passed = 0
-        batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, percentage_unstables, \
+        batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, \
             cur_global_min, cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains, \
             tree_depth, infeasible_nodes, improvement_margin, time_needed_for_branching, \
             time_needed_for_relu_split, time_since_last_batch = [0, np.inf] + [-np.inf] * 17
@@ -118,7 +118,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     if frequency:
                         batch_count += 1
                         cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
-                                        improved_min, improved_max, no_unstables, percentage_unstables, cur_global_min,
+                                        improved_min, improved_max, no_unstables, cur_global_min,
                                         cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains,
                                         infeasible_nodes, improvement_margin, tree_depth,
                                         time_needed_for_relu_split, time_needed_for_branching]
@@ -182,8 +182,6 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 if match:
                     no_unstables = int(match.group(1))
                     # print("No. Unstables", no_unstables)
-                    percentage_unstables = no_unstables / total_neuron_count
-                    # print("Percentage Unstables", percentage_unstables)
             if "A batch of relu splits requires" in line:
                 pattern = r'[-+]?[0-9]*\.[0-9]*'
 
@@ -235,7 +233,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         if index_number >= 0:
             cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
                             improved_min, improved_max,
-                            no_unstables, percentage_unstables, cur_global_min, cur_global_max, visited_states,
+                            no_unstables, cur_global_min, cur_global_max, visited_states,
                             cur_no_domains, cur_no_hard_domains, infeasible_nodes, improvement_margin,
                             tree_depth, time_needed_for_relu_split,
                             time_needed_for_branching]

@@ -15,13 +15,10 @@ from sklearn.preprocessing import StandardScaler
 from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICATION, \
     CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from src.eval.running_time_prediction import eval_final_timeout_classification, eval_timeout_classification_fold
-from src.feature_ablation_study.shapley_values import get_shapley_explanation
-from src.running_time_prediction.timeout_classification import train_timeout_classifier_random_forest
+
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, VERIFIER_FEATURE_MAP, OVAL_FEATURE_NAMES, \
     VERINET_FEATURE_NAMES, ABCROWN_FEATURE_NAMES, TIMEOUT
 from src.util.data_loaders import load_verinet_data, load_oval_bab_data, load_abcrown_data
-
-from shap.plots import beeswarm, bar
 
 
 def train_continuous_timeout_classifier_feature_ablation(log_path, load_data_func, neuron_count=None,
@@ -293,6 +290,10 @@ def run_feature_ablation_study_timeout_classification(config):
 
         feature_collection_cutoff = experiment_info.get("first_classification_at",
                                                         config.get("FEATURE_COLLECTION_CUTOFF", 10))
+        no_classes = experiment_info.get("no_classes", 10)
+
+        # TODO: REMOVE THAT THATS A HACK!!
+        feature_collection_cutoff = 30
 
         for threshold in thresholds:
             for verifier in SUPPORTED_VERIFIERS:
@@ -308,7 +309,8 @@ def run_feature_ablation_study_timeout_classification(config):
                     features, running_times, results, enum_results = load_abcrown_data(
                         abcrown_log_file,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        neuron_count=experiment_neuron_count
+                        neuron_count=experiment_neuron_count,
+                        no_classes=no_classes,
                     )
                 elif verifier == VERINET:
                     verinet_log_file = os.path.join(experiment_logs_path,
@@ -320,7 +322,8 @@ def run_feature_ablation_study_timeout_classification(config):
                         verinet_log_file,
                         neuron_count=experiment_neuron_count,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        filter_misclassified=True
+                        filter_misclassified=True,
+                        no_classes=no_classes
                     )
                 elif verifier == OVAL:
                     oval_log_file = os.path.join(experiment_logs_path,
@@ -331,7 +334,8 @@ def run_feature_ablation_study_timeout_classification(config):
                     features, running_times, results, enum_results = load_oval_bab_data(oval_log_file,
                                                                                         neuron_count=experiment_neuron_count,
                                                                                         feature_collection_cutoff=feature_collection_cutoff,
-                                                                                        filter_misclassified=True)
+                                                                                        filter_misclassified=True,
+                                                                                        no_classes=no_classes)
                 else:
                     # This should never happen!
                     assert 0, "Encountered Unknown Verifier!"
@@ -437,11 +441,6 @@ def eval_feature_ablation_study(feature_ablation_study_folder, standard_results_
             table_csv += "\n"
 
         print(table_csv)
-
-
-
-
-
 
 
 def train_timeout_classifier_feature_ablation(training_inputs, running_times, results_path,

@@ -93,7 +93,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
     for instance_lines in split_by_instances:
         times_up = False
         last_checkpoint_passed = 0
-        min_attack_margin, one_shot_global_bound_min, one_shot_global_max, no_unstables, percentage_unstables, \
+        min_attack_margin, one_shot_global_bound_min, one_shot_global_max, no_unstables, \
             prediction_margin, positive_domain_ratio, total_branches, explored_branches, \
             bab_cur_lower_bound, tree_depth, safe_constraints_percentage, time_since_last_report = [np.inf] + [
             -np.inf] * 12
@@ -142,7 +142,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         cur_features = [min_attack_margin,
                                         one_shot_global_bound_min, one_shot_global_max, safe_constraints_percentage,
-                                        no_unstables, percentage_unstables, prediction_margin, positive_domain_ratio,
+                                        no_unstables, prediction_margin, positive_domain_ratio,
                                         total_branches, explored_branches, bab_cur_lower_bound, tree_depth,
                                         time_since_last_report]
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
@@ -230,8 +230,6 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 if match:
                     no_unstables = int(match.group(1))
                     # print("No. Unstables", no_unstables)
-                    percentage_unstables = no_unstables / total_neuron_count
-                    # print("Percentage Unstables", percentage_unstables)
 
             # BaB Features
             if "FRACTION OF POSITIVE DOMAIN:" in line:
@@ -274,7 +272,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
         if index_number >= 0:
             cur_features = [min_attack_margin, one_shot_global_bound_min, one_shot_global_max, safe_constraints_percentage,
-                            no_unstables, percentage_unstables, prediction_margin, positive_domain_ratio,
+                            no_unstables, prediction_margin, positive_domain_ratio,
                             total_branches, explored_branches, bab_cur_lower_bound, tree_depth, time_since_last_report]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features

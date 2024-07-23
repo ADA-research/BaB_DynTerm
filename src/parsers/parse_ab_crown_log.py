@@ -68,7 +68,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         times_up = False
         last_checkpoint_passed = 0
         min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables, \
-            percentage_unstables, prediction_margin, positive_domain_ratio, domain_length, bab_lower_bound, \
+            prediction_margin, positive_domain_ratio, domain_length, bab_lower_bound, \
             visited_domains, tree_depth, bab_round, time_since_last_batch, \
             time_taken_for_last_batch = [-np.inf] * 14
         bab_start_time, cumulative_time = None, None
@@ -101,13 +101,13 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     if frequency:
                         if include_bab_features:
                             cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound,
-                                            no_unstables, percentage_unstables, prediction_margin,
+                                            no_unstables, prediction_margin,
                                             positive_domain_ratio, domain_length, visited_domains, bab_lower_bound,
                                             tree_depth, bab_round, time_since_last_batch,
                                             time_taken_for_last_batch]
                         else:
                             cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound,
-                                            no_unstables, percentage_unstables, prediction_margin]
+                                            no_unstables, prediction_margin]
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
@@ -171,8 +171,6 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 if match:
                     no_unstables = int(match.group(1))
                     # print("No. Unstables", no_unstables)
-                    percentage_unstables = no_unstables / total_neuron_count
-                    # print("Percentage Unstables", percentage_unstables)
             if "Model prediction is:" in line:
                 i = 1
                 while 'device' not in line:
@@ -244,12 +242,12 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         if index_number >= 0:
             if include_bab_features:
                 cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables,
-                                percentage_unstables, prediction_margin, positive_domain_ratio, domain_length,
+                                prediction_margin, positive_domain_ratio, domain_length,
                                 visited_domains, bab_lower_bound, tree_depth, bab_round, time_since_last_batch,
                                 time_taken_for_last_batch]
             else:
                 cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables,
-                                percentage_unstables, prediction_margin]
+                                prediction_margin]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features
             else:

@@ -79,7 +79,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, \
             cur_global_min, cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains, \
             tree_depth, infeasible_nodes, improvement_margin, time_needed_for_branching, \
-            time_needed_for_relu_split, time_since_last_batch = [0, np.inf] + [-np.inf] * 17
+            time_needed_for_relu_split, time_since_last_batch = [0, np.inf] + [-np.inf] * 16
         index_number = -1
         lines = instance_lines.splitlines()
         for index, line in enumerate(lines):

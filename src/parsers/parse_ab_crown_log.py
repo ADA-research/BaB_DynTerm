@@ -70,7 +70,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         min_pgd_margin, crown_global_bound, alpha_crown_global_bound, no_unstables, \
             prediction_margin, positive_domain_ratio, domain_length, bab_lower_bound, \
             visited_domains, tree_depth, bab_round, time_since_last_batch, \
-            time_taken_for_last_batch = [-np.inf] * 14
+            time_taken_for_last_batch = [-np.inf] * 13
         bab_start_time, cumulative_time = None, None
         index_number = -1
         lines = instance_lines.splitlines()

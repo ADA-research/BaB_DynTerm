@@ -96,7 +96,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         min_attack_margin, one_shot_global_bound_min, one_shot_global_max, no_unstables, \
             prediction_margin, positive_domain_ratio, total_branches, explored_branches, \
             bab_cur_lower_bound, tree_depth, safe_constraints_percentage, time_since_last_report = [np.inf] + [
-            -np.inf] * 12
+            -np.inf] * 11
         index_number = -1
         lines = instance_lines.splitlines()
         current_time = 0

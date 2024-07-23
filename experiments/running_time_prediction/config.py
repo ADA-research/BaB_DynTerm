@@ -92,17 +92,17 @@ CONFIG_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 10,
+            "first_classification_at": 15,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 10,
+            "first_classification_at": 15,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 10
+            "first_classification_at": 15
         }
     }
 }
@@ -117,6 +117,7 @@ CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
     "INCLUDED_EXPERIMENTS": [],
     "FEATURE_COLLECTION_CUTOFF": "ADAPTIVE",
     "TIMEOUT_CLASSIFICATION_FREQUENCY": 10,
+    "FIRST_CLASSIFICATION_AT": 10,
     "MAX_RUNNING_TIME": 600,
     "INCLUDE_INCOMPLETE_RESULTS": True,
     "TIMEOUT_CLASSIFICATION_THRESHOLDS": [0.5, 0.99],
@@ -148,17 +149,17 @@ CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 10,
+            "first_classification_at": 15,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 10,
+            "first_classification_at": 15,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 10
+            "first_classification_at": 15
         }
     }
 }

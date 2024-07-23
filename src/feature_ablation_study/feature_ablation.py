@@ -296,7 +296,7 @@ def run_feature_ablation_study_timeout_classification(config):
         feature_collection_cutoff = 30
 
         for threshold in thresholds:
-            for verifier in SUPPORTED_VERIFIERS:
+            for verifier in [ABCROWN]:
                 verifier_results_path = os.path.join(experiment_results_path, verifier)
                 os.makedirs(verifier_results_path, exist_ok=True)
                 if verifier == ABCROWN:
@@ -369,9 +369,9 @@ def train_timeout_classifier_feature_ablation_worker(args_queue):
         train_timeout_classifier_feature_ablation(*args)
 
 
-def eval_feature_ablation_study(feature_ablation_study_folder, standard_results_folder, threshold=0.5):
+def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5):
     # todo: change that
-    experiments = os.listdir(standard_results_folder)
+    experiments = os.listdir(feature_ablation_study_folder)
     for verifier in SUPPORTED_VERIFIERS:
         table_csv = "Feature Names,"
         table_csv += ",,".join(experiments) + "\n"
@@ -384,15 +384,14 @@ def eval_feature_ablation_study(feature_ablation_study_folder, standard_results_
             for experiment in experiments:
                 feature_differences = defaultdict(float)
                 if not os.path.exists(
-                        f"./{standard_results_folder}/{experiment}/{verifier}/metrics_thresh_{threshold}.json"):
+                        f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/metrics_thresh_{threshold}.json"):
                     table_csv += "-,-,"
                     continue
-                with open(f"./{standard_results_folder}/{experiment}/{verifier}/metrics_thresh_{threshold}.json",
-                          "r") as f:
+                with open(f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/metrics_thresh_{threshold}.json", "r") as f:
                     standard_results = json.load(f)
                 standard_results = standard_results["avg"]
 
-                with open(f"./{standard_results_folder}/{experiment}/{verifier}/ecdf_threshold_{threshold}.png.json",
+                with open(f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/ecdf_threshold_{threshold}.png.json",
                           "r") as f:
                     standard_running_times = json.load(f)
                 no_solved_standard = len(
@@ -487,6 +486,8 @@ def train_timeout_classifier_feature_ablation(training_inputs, running_times, re
     split_labels[running_times < feature_collection_cutoff] = 0
     split_labels[verification_results == 2.] = 2
 
+    VERIFIER_FEATURE_MAP[verifier].append("BASELINE")
+
     for feature_index, feature in enumerate(VERIFIER_FEATURE_MAP[verifier]):
         print(f"EXCLUDING FEATURE {feature} ON VERIFIER {verifier}")
         results_path_feature = f"{results_path}/{feature}/"
@@ -497,8 +498,10 @@ def train_timeout_classifier_feature_ablation(training_inputs, running_times, re
         running_time_labels_shuffled = np.array([])
         sat_timeout_labels_shuffled = np.array([])
         metrics = {}
-
-        feature_selector = [x for x in range(training_inputs.shape[1]) if x != feature_index]
+        if feature != "BASELINE":
+            feature_selector = [x for x in range(training_inputs.shape[1]) if x != feature_index]
+        else:
+            feature_selector = [x for x in range(training_inputs.shape[1])]
         for fold, (train_index, test_index) in enumerate(kf.split(training_inputs, split_labels)):
             train_inputs = training_inputs[train_index][:, feature_selector]
             test_inputs = training_inputs[test_index][:, feature_selector]
@@ -640,7 +643,6 @@ if __name__ == "__main__":
     run_feature_ablation_study_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
     eval_feature_ablation_study(
         feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
-        standard_results_folder="./results/results_timeout_classification/",
         threshold=0.5
     )
     # get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)

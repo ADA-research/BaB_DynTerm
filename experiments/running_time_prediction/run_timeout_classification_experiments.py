@@ -136,7 +136,7 @@ def run_continuous_timeout_prediction_experiment(config: dict):
         assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
         experiment_neuron_count = experiment_info.get("neuron_count")
         assert experiment_neuron_count
-        first_classification_at = experiment_info.get("first_classification_at", classification_frequency)
+        first_classification_at = experiment_info.get("first_classification_at", config.get("FIRST_CLASSIFICATION_AT", classification_frequency))
 
         no_classes = experiment_info.get("no_classes", 10)
         os.makedirs(experiment_results_path, exist_ok=True)
@@ -293,6 +293,7 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 
 if __name__ == "__main__":
+    run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
     run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

@@ -162,6 +162,22 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     initial_alpha_crown_bounds = eval(matched_array)
                     alpha_crown_global_bound = min(initial_alpha_crown_bounds)
 
+            if "alpha-CROWN with intermediate bounds by MIP" in line:
+                i = 1
+                while 'device' not in line:
+                    line = line + lines[index + i]
+                    i += 1
+                pattern = r'tensor\(\[\s*(.*?)\s*\],\s*device'
+
+                match = re.search(pattern, line)
+
+                if match:
+                    matched_array = match.group(1)
+                    if "inf" in matched_array:
+                        matched_array = matched_array.replace("inf", "np.inf")
+                    mip_alpha_crown_bounds = eval(matched_array)
+                    alpha_crown_global_bound = min(mip_alpha_crown_bounds)
+
             if "# of unstable neurons" in line:
                 line = line + lines[index + 1]
                 pattern = r'# of unstable neurons:\s*(\d+)'

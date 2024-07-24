@@ -22,7 +22,6 @@ ABCROWN_FEATURE_NAMES = [
     "Time taken for last batch"
 ]
 
-# TODO: What is about adversarial attack margin??
 OVAL_FEATURE_NAMES = [
     "No. Batches",
     "Time since last Batch",

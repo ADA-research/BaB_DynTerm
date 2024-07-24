@@ -36,8 +36,6 @@ OVAL_FEATURE_NAMES = [
     "No. of visited domains",
     "Cur. No. of Domains",
     "Cur No. of Hard Domains",
-    "No. of infeasible nodes",
-    "Improvement Margin",
     "Tree Depth",
     "Time needed for Split",
     "Time needed for Branching"

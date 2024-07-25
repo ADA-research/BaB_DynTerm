@@ -78,8 +78,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         last_checkpoint_passed = 0
         batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, \
             cur_global_min, cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains, \
-            tree_depth, time_needed_for_branching, \
-            time_needed_for_relu_split, time_since_last_batch = [0, np.inf] + [-np.inf] * 14
+            tree_depth, time_taken_for_last_batch, time_since_last_batch = [0, np.inf] + [-np.inf] * 13
         index_number = -1
         lines = instance_lines.splitlines()
         for index, line in enumerate(lines):
@@ -120,8 +119,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                         cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
                                         improved_min, improved_max, no_unstables, cur_global_min,
                                         cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains,
-                                        tree_depth,
-                                        time_needed_for_relu_split, time_needed_for_branching]
+                                        tree_depth, time_taken_for_last_batch]
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
@@ -135,6 +133,8 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 match = re.search(pattern, line)
 
                 if match:
+                    if batch_start_time:
+                        time_taken_for_last_batch = float(match.group()) - batch_start_time
                     batch_start_time = float(match.group())
                     batch_count += 1
 
@@ -228,8 +228,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                             improved_min, improved_max,
                             no_unstables, cur_global_min, cur_global_max, visited_states,
                             cur_no_domains, cur_no_hard_domains,
-                            tree_depth, time_needed_for_relu_split,
-                            time_needed_for_branching]
+                            tree_depth, time_taken_for_last_batch]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features
             else:

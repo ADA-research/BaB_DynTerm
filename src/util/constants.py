@@ -37,8 +37,7 @@ OVAL_FEATURE_NAMES = [
     "Cur. No. of Domains",
     "Cur No. of Hard Domains",
     "Tree Depth",
-    "Time needed for Bounding",
-    "Time needed for Branching"
+    "Time taken for last Batch"
 ]
 
 VERINET_FEATURE_NAMES = [

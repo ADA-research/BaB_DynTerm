@@ -71,7 +71,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
             prediction_margin, positive_domain_ratio, domain_length, bab_lower_bound, \
             visited_domains, tree_depth, bab_round, time_since_last_batch, \
             time_taken_for_last_batch = [-np.inf] * 13
-        bab_start_time, cumulative_time = None, None
+        cumulative_time = None
         index_number = -1
         lines = instance_lines.splitlines()
         for index, line in enumerate(lines):
@@ -94,10 +94,8 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
                 if match:
                     current_time = float(match.group())
-                    if cumulative_time and not bab_start_time:
-                        bab_start_time = current_time - cumulative_time
-                    if bab_start_time:
-                        time_since_last_batch = current_time - (bab_start_time + cumulative_time)
+                    if cumulative_time:
+                        time_since_last_batch = current_time - cumulative_time
                     if frequency:
                         if include_bab_features:
                             cur_features = [min_pgd_margin, crown_global_bound, alpha_crown_global_bound,
@@ -251,9 +249,14 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 match = re.search(r"Cumulative time: ([\d+\.\d]+)", line)
 
                 if match:
-                    if cumulative_time:
-                        time_taken_for_last_batch = float(match.group(1)) - cumulative_time
                     cumulative_time = float(match.group(1))
+
+            if "Batch Time:" in line:
+                match = re.search(r"Batch Time: ([\d+\.\d]+)", line)
+
+                if match:
+                    time_taken_for_last_batch = float(match.group(1))
+
 
         if index_number >= 0:
             if include_bab_features:

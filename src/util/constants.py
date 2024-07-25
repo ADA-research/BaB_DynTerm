@@ -37,7 +37,7 @@ OVAL_FEATURE_NAMES = [
     "Cur. No. of Domains",
     "Cur No. of Hard Domains",
     "Tree Depth",
-    "Time needed for Split",
+    "Time needed for Bounding",
     "Time needed for Branching"
 ]
 

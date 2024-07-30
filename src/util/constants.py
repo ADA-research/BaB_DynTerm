@@ -35,7 +35,6 @@ OVAL_FEATURE_NAMES = [
     "BaB Cur Global Upper Bound",
     "No. of visited domains",
     "Cur. No. of Domains",
-    "Cur No. of Hard Domains",
     "Tree Depth",
     "Time taken for last Batch"
 ]

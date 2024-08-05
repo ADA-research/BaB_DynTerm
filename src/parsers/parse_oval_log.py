@@ -78,7 +78,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         last_checkpoint_passed = 0
         batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, \
             cur_global_min, cur_global_max, visited_states, cur_no_domains, \
-            tree_depth, time_taken_for_last_batch, time_since_last_batch = [0, np.inf] + [-np.inf] * 12
+            tree_depth, positive_domain_percentage, time_taken_for_last_batch, time_since_last_batch = [0, np.inf] + [-np.inf] * 13
         index_number = -1
         lines = instance_lines.splitlines()
         for index, line in enumerate(lines):
@@ -117,7 +117,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     if frequency:
                         batch_count += 1
                         cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
-                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, batch_count, time_since_last_batch, time_taken_for_last_batch]
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, positive_domain_percentage, batch_count, time_since_last_batch, time_taken_for_last_batch]
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
@@ -221,9 +221,16 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     tree_depth = int(match[0])
                     # print("tree depth min", tree_depth_min)
 
+            if "POSITIVE DOMAINS TOTAL PERCENTAGE" in line:
+                pattern = r'[-+]?[0-9]*\.[0-9]*'
+                match = re.search(pattern, line)
+
+                if match:
+                    positive_domain_percentage = float(match.group(0))
+
         if index_number >= 0:
             cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
-                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, batch_count, time_since_last_batch, time_taken_for_last_batch]
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, positive_domain_percentage, batch_count, time_since_last_batch, time_taken_for_last_batch]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features
             else:
@@ -252,5 +259,5 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
 if __name__ == "__main__":
     log_file = load_log_file("./verification_logs/MNIST_9_100/OVAL-BAB.log")
-    features = get_features_from_verification_log(log_file, frequency=10, total_neuron_count=600)
+    features = get_features_from_verification_log(log_file, frequency=10, total_neuron_count=900)
     print(features)

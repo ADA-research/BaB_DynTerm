@@ -36,6 +36,7 @@ OVAL_FEATURE_NAMES = [
     "BaB Cur Global Lower Bound",
     "BaB Cur Global Upper Bound",
     "Tree Depth",
+    "Positive Domain Ratio",
     "No. Batches",
     "Time since last Batch",
     "Time taken for last Batch"

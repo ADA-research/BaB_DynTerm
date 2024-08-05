@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 import os
 import pickle
 from pathlib import Path
@@ -10,8 +11,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
-from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICATION
+from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICATION, \
+    CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from src.eval.running_time_prediction import eval_final_timeout_classification, eval_timeout_classification_fold
+from src.feature_ablation_study.custom_shapley_plots import beeswarm_checkpoint_coloring
 from src.feature_ablation_study.shapley_values import get_shapley_explanation
 from src.running_time_prediction.timeout_classification import train_timeout_classifier_random_forest
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL
@@ -58,6 +61,9 @@ def get_shapley_values_for_timeout_classification(config):
 
         feature_collection_cutoff = experiment_info.get("first_classification_at",
                                                         config.get("FEATURE_COLLECTION_CUTOFF", 10))
+
+        # TODO: THIS IS A HACK! REMOVE!
+        feature_collection_cutoff = 30
 
         for threshold in thresholds:
             for verifier in SUPPORTED_VERIFIERS:
@@ -112,7 +118,7 @@ def get_shapley_values_for_timeout_classification(config):
                                                                   verifier=verifier)
 
 
-def eval_final_shapley_values(shapley_values_per_fold, results_path, train_features, labels):
+def eval_final_shapley_values(shapley_values_per_fold, results_path):
     plt.rcParams.update({'font.family': 'serif', 'font.serif': 'Times New Roman'})
     for fold, shapley_values in enumerate(shapley_values_per_fold):
         beeswarm(
@@ -133,6 +139,29 @@ def eval_final_shapley_values(shapley_values_per_fold, results_path, train_featu
     )
     plt.savefig(f"{results_path}/final_shapley_values_bar.png")
     plt.close()
+    with open(f"{results_path}/shapley_values.pkl", "wb") as f:
+        pickle.dump(shapley_values_per_fold, f)
+
+def eval_final_shapley_values_continuous_classification(shapley_values_per_fold, results_path):
+    plt.rcParams.update({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+    beeswarm_checkpoint_coloring(
+        shap_values=shapley_values_per_fold,
+        max_display=100,
+        plot_size=(25, 25),
+        show=False,
+        color_bar=True,
+    )
+    plt.savefig(f"{results_path}/final_shapley_values_beeswarm.png")
+    plt.close()
+    # fig, ax = plt.subplots(figsize=(25, 25))
+    # bar(
+    #     shap_values={f"Fold {fold}": shapley_values for fold, shapley_values in enumerate(shapley_values_per_fold)},
+    #     max_display=100,
+    #     show=False,
+    #     ax=ax
+    # )
+    # plt.savefig(f"{results_path}/final_shapley_values_bar.png")
+    # plt.close()
     with open(f"{results_path}/shapley_values.pkl", "wb") as f:
         pickle.dump(shapley_values_per_fold, f)
 
@@ -252,9 +281,254 @@ def train_timeout_classifier_with_shapley_explanation(training_inputs, running_t
                                       feature_collection_cutoff=feature_collection_cutoff,
                                       running_times_timeout_prediction=timeout_running_times)
 
-    eval_final_shapley_values(shapley_values_per_fold=shapley_values, results_path=results_path, train_features=training_inputs, labels=sat_timeout_labels)
+    eval_final_shapley_values(shapley_values_per_fold=shapley_values, results_path=results_path)
+
+def train_continuous_timeout_classifier_shapley(log_path, load_data_func, neuron_count=None,
+                                                         include_incomplete_results=False,
+                                                         results_path="./results", threshold=.5,
+                                                         classification_frequency=10, cutoff=600,
+                                                         first_classification_at=None,
+                                                         no_classes=10, random_state=42, verifier=ABCROWN):
+    print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
+
+    training_inputs, running_time_training_outputs, results, satisfiability_training_outputs = load_data_func(
+        log_path, par=1, features_from_log=True,
+        neuron_count=neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
+        frequency=classification_frequency, no_classes=no_classes)
+
+    timeout_indices = np.where(satisfiability_training_outputs == 2)
+    no_timeout_indices = np.where(satisfiability_training_outputs != 2)
+    sat_timeout_labels = np.copy(satisfiability_training_outputs)
+    sat_timeout_labels[timeout_indices] = 1
+    sat_timeout_labels[no_timeout_indices] = 0
+
+    if not include_incomplete_results:
+        print("--------------------------- EXCLUDING INCOMPLETE RESULTS FROM TRAINING ------------------------------")
+        no_incomplete_indices = np.where(running_time_training_outputs > np.log10(10))
+        training_inputs = training_inputs[no_incomplete_indices]
+        running_time_training_outputs = running_time_training_outputs[no_incomplete_indices]
+        satisfiability_training_outputs = satisfiability_training_outputs[no_incomplete_indices]
+        sat_timeout_labels = sat_timeout_labels[no_incomplete_indices]
+
+    # Fixed Random State for Comparability between fixed and dynamic Timeout Classification
+    kf = StratifiedKFold(n_splits=5, random_state=random_state, shuffle=True)
+
+    feature_collection_cutoff = np.log10(first_classification_at) if first_classification_at else np.log10(
+        classification_frequency)
+
+    split_labels = np.array([1 for _ in satisfiability_training_outputs])
+    split_labels[running_time_training_outputs < feature_collection_cutoff] = 0
+    split_labels[satisfiability_training_outputs == 2.] = 2
+
+    preds = np.array([])
+    sat_labels_shuffled = np.array([])
+    running_time_labels_shuffled = np.array([])
+    sat_timeout_labels_shuffled = np.array([])
+    metrics = {}
+    running_time_labels_timeout_prediction = np.array([])
+    shapley_values = []
+
+    # TODO REMOVE
+    # classification_frequency = 120
 
 
+    for fold, (train_index, test_index) in enumerate(kf.split(training_inputs[classification_frequency], split_labels)):
+        train_labels_sat = sat_timeout_labels[train_index]
+        test_labels_sat = sat_timeout_labels[test_index]
+        running_times_timeout_prediction_test = running_time_training_outputs[test_index].copy()
+        test_running_times = running_time_training_outputs[test_index]
+
+        print(f"---------------------------------- Fold {fold} ----------------------------------")
+
+        solved_instances = np.array([], dtype=int)
+        stopped_instances = np.array([], dtype=int)
+        checkpoint_shapley_values = []
+
+        for checkpoint in range(classification_frequency, cutoff, classification_frequency):
+            training_inputs_checkpoint = training_inputs[checkpoint]
+
+            upper_bound_running_time = np.log10(checkpoint)
+            lower_bound_running_time = np.log10(checkpoint - classification_frequency)
+            solved_instances_checkpoint = np.where(
+                (test_running_times >= lower_bound_running_time) & (
+                        test_running_times <= upper_bound_running_time) & (
+                        satisfiability_training_outputs[test_index] != 2))[0]
+            # if solved_instances_checkpoint.shape[0] > 0:
+                # print(f"SOLVED {solved_instances_checkpoint} at {checkpoint} s!")
+            solved_instances = np.append(solved_instances, solved_instances_checkpoint)
+
+            if len(test_index) - len(stopped_instances) - len(solved_instances) == 0:
+                # print("All Test Samples stopped or solved!")
+                break
+
+            if first_classification_at and checkpoint < first_classification_at:
+                # print(f"Skipping Timeout Prediction at checkpoint {checkpoint} as specified in config!")
+                continue
+
+            train_inputs = training_inputs_checkpoint[train_index]
+            test_inputs = training_inputs_checkpoint[test_index]
+            rf_classifier = RandomForestClassifier(n_estimators=200, random_state=random_state)
+            rf_classifier.fit(train_inputs, train_labels_sat)
+
+            probability_predictions = rf_classifier.predict_proba(test_inputs)
+            if probability_predictions.shape[1] > 1:
+                y_pred_custom_threshold = (probability_predictions[:, 1] > threshold).astype(int)
+                predictions = y_pred_custom_threshold
+            else:
+                predictions = probability_predictions
+
+            shapley_dict, shapley_values_per_instance = get_shapley_explanation(
+                rf_classifier,
+                X_train=training_inputs_checkpoint,
+                X_test=test_inputs,
+                feature_collection_cutoff=np.log10(checkpoint),
+                test_running_times=test_running_times,
+                results_path=results_path,
+                fold=f"{fold}_checkpoint_{checkpoint}",
+                checkpoint=checkpoint
+            )
+            checkpoint_shapley_values.append(shapley_values_per_instance)
+
+            stopped_instances_checkpoint = []
+            for index, test_sample in enumerate(test_index):
+                if predictions[index] == 1 and not np.isin(index, stopped_instances) and not np.isin(index,
+                                                                                                     solved_instances):
+                    stopped_instances_checkpoint.append(index)
+            # print(f"STOPPED INSTANCES {stopped_instances_checkpoint} at {checkpoint}s!")
+            stopped_instances = np.append(stopped_instances, np.array(stopped_instances_checkpoint, dtype=int))
+            running_times_timeout_prediction_test[stopped_instances_checkpoint] = np.log10(checkpoint)
+
+        predictions = np.zeros(test_labels_sat.shape)
+        predictions[stopped_instances] = 1
+        preds = np.append(preds, predictions)
+        sat_labels_shuffled = np.append(sat_labels_shuffled, satisfiability_training_outputs[test_index])
+        sat_timeout_labels_shuffled = np.append(sat_timeout_labels_shuffled, sat_timeout_labels[test_index])
+        running_time_labels_shuffled = np.append(running_time_labels_shuffled,
+                                                 running_time_training_outputs[test_index])
+        running_time_labels_timeout_prediction = np.append(running_time_labels_timeout_prediction,
+                                                           running_times_timeout_prediction_test)
+
+        fold_eval = eval_timeout_classification_fold(predictions, test_labels_sat, test_running_times,
+                                                     feature_collection_cutoff=feature_collection_cutoff)
+        metrics[fold] = fold_eval
+        shapley_values.append(checkpoint_shapley_values)
+
+    eval_final_timeout_classification(predictions=preds, verification_results=sat_labels_shuffled,
+                                      timeout_labels=sat_timeout_labels_shuffled,
+                                      running_time_labels=running_time_labels_shuffled, metrics=metrics,
+                                      threshold=threshold, results_path=results_path,
+                                      include_incomplete_results=include_incomplete_results,
+                                      feature_collection_cutoff=feature_collection_cutoff,
+                                      running_times_timeout_prediction=running_time_labels_timeout_prediction)
+    eval_final_shapley_values_continuous_classification(
+        shapley_values_per_fold=shapley_values,
+        results_path=results_path,
+    )
+
+
+def run_feature_ablation_study_continuous_timeout_classification(config, thresholds=None, results_path=None):
+    """
+        Run Timeout prediction experiments using a continuous feature collection phase from a config
+
+        :param config: Refer to sample file experiments/running_time_prediction/config.py
+        """
+
+    verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
+    experiments = config.get("INCLUDED_EXPERIMENTS", None)
+    if not experiments:
+        experiments = os.listdir(verification_logs_path)
+
+    include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
+    feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
+
+    results_path = './results/feature_ablation/shapley_continuous_classification/' if not results_path else results_path
+    os.makedirs(results_path, exist_ok=True)
+
+    thresholds = config.get("TIMEOUT_CLASSIFICATION_THRESHOLDS", [0.5]) if not thresholds else thresholds
+    classification_frequency = config.get("TIMEOUT_CLASSIFICATION_FREQUENCY", 10)
+    cutoff = config.get("MAX_RUNNING_TIME", 600)
+
+    random_state = config.get("RANDOM_STATE", 42)
+
+    args_queue = multiprocessing.Queue()
+
+    for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
+        experiment_results_path = os.path.join(results_path, experiment)
+        experiment_logs_path = os.path.join(verification_logs_path, experiment)
+        experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
+        assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
+        experiment_neuron_count = experiment_info.get("neuron_count")
+        assert experiment_neuron_count
+        first_classification_at = experiment_info.get("first_classification_at", classification_frequency)
+
+        no_classes = experiment_info.get("no_classes", 10)
+        os.makedirs(experiment_results_path, exist_ok=True)
+
+        for threshold in thresholds:
+            for verifier in SUPPORTED_VERIFIERS:
+                print(f"---------------- VERIFIER {verifier} THRESHOLD {threshold} ---------------------------")
+                verifier_results_path = os.path.join(experiment_results_path, verifier)
+                os.makedirs(verifier_results_path, exist_ok=True)
+                if verifier == ABCROWN:
+                    log_path = os.path.join(experiment_logs_path, config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
+                    if not os.path.isfile(log_path):
+                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
+                        continue
+                    load_data_func = load_abcrown_data
+                elif verifier == VERINET:
+                    log_path = os.path.join(experiment_logs_path, config.get("VERINET_LOG_NAME", "VERINET.log"))
+                    if not os.path.isfile(log_path):
+                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
+                        continue
+                    load_data_func = load_verinet_data
+                elif verifier == OVAL:
+                    log_path = os.path.join(experiment_logs_path, config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
+                    if not os.path.isfile(log_path):
+                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
+                        continue
+                    load_data_func = load_oval_bab_data
+                else:
+                    # This should never happen!
+                    assert 0, "Encountered Unknown Verifier!"
+
+                print(f"-------------------------- {experiment} -------------------")
+                args = (
+                    log_path, load_data_func, experiment_neuron_count, include_incomplete_results, verifier_results_path,
+                    threshold,
+                    classification_frequency, cutoff, first_classification_at, no_classes, random_state, verifier)
+
+                args_queue.put(args)
+                # train_continuous_timeout_classifier_feature_ablation(log_path=log_path, load_data_func=load_data_func,
+                #                                     neuron_count=experiment_neuron_count,
+                #                                     include_incomplete_results=include_incomplete_results,
+                #                                     results_path=verifier_results_path, threshold=threshold,
+                #                                     classification_frequency=classification_frequency, cutoff=cutoff,
+                #                                     first_classification_at=first_classification_at,
+                #                                     no_classes=no_classes,
+                #                                     random_state=random_state, verifier=verifier)
+
+    procs = [multiprocessing.Process(target=train_continuous_timeout_classifier_shapley_worker, args=(args_queue, ))
+             for _ in range(10)]
+    for p in procs:
+        p.daemon = True
+        args_queue.put(None)
+        p.start()
+
+    [p.join() for p in procs]
+
+
+
+def train_continuous_timeout_classifier_shapley_worker(args_queue):
+    while True:
+        args = args_queue.get()
+        if args is None:
+            break
+        train_continuous_timeout_classifier_shapley(*args)
 
 if __name__ == "__main__":
-    get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    # get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION,
+                                                                 thresholds=[0.99])

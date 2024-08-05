@@ -116,10 +116,8 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                         time_since_last_batch = current_time - batch_start_time
                     if frequency:
                         batch_count += 1
-                        cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
-                                        improved_min, improved_max, no_unstables, cur_global_min,
-                                        cur_global_max, visited_states, cur_no_domains,
-                                        tree_depth, time_taken_for_last_batch]
+                        cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, batch_count, time_since_last_batch, time_taken_for_last_batch]
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
@@ -224,11 +222,8 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     # print("tree depth min", tree_depth_min)
 
         if index_number >= 0:
-            cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
-                            improved_min, improved_max,
-                            no_unstables, cur_global_min, cur_global_max, visited_states,
-                            cur_no_domains,
-                            tree_depth, time_taken_for_last_batch]
+            cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, batch_count, time_since_last_batch, time_taken_for_last_batch]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features
             else:

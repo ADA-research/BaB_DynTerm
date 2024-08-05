@@ -176,13 +176,13 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     safe_constraints_percentage = len(safe_constraints) / (no_classes - 1)
                     # print("Safe Percentage:", safe_constraints_percentage)
 
-            if "NO OF SAFE CONSTRAINTS" in line:
-                pattern = r'(\d+)'
-                match = re.search(pattern, line)
-
-                if match:
-                    no_safe_constraints = int(match.group())
-                    safe_constraints_percentage = no_safe_constraints / (no_classes - 1)
+            # if "NO OF SAFE CONSTRAINTS" in line:
+            #     pattern = r'(\d+)'
+            #     match = re.search(pattern, line)
+            #
+            #     if match:
+            #         no_safe_constraints = int(match.group())
+            #         safe_constraints_percentage = no_safe_constraints / (no_classes - 1)
 
 
             if "Impact Score" in line:

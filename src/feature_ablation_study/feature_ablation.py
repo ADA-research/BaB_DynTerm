@@ -17,7 +17,7 @@ from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICA
 from src.eval.running_time_prediction import eval_final_timeout_classification, eval_timeout_classification_fold
 
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, VERIFIER_FEATURE_MAP, OVAL_FEATURE_NAMES, \
-    VERINET_FEATURE_NAMES, ABCROWN_FEATURE_NAMES, TIMEOUT
+    VERINET_FEATURE_NAMES, ABCROWN_FEATURE_NAMES, TIMEOUT, experiment_samples, experiment_groups, UNSAT
 from src.util.data_loaders import load_verinet_data, load_oval_bab_data, load_abcrown_data
 
 
@@ -149,7 +149,7 @@ def train_continuous_timeout_classifier_feature_ablation(log_path, load_data_fun
                                           running_times_timeout_prediction=running_time_labels_timeout_prediction)
 
 
-def run_feature_ablation_study_continuous_timeout_classification(config):
+def run_feature_ablation_study_continuous_timeout_classification(config, thresholds=None, results_path=None):
     """
         Run Timeout prediction experiments using a continuous feature collection phase from a config
 
@@ -164,10 +164,10 @@ def run_feature_ablation_study_continuous_timeout_classification(config):
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
     feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
 
-    results_path = './results/feature_ablation/feature_ablation_study_continuous_classification/'
+    results_path = './results/feature_ablation/feature_ablation_study_continuous_classification/' if not results_path else results_path
     os.makedirs(results_path, exist_ok=True)
 
-    thresholds = config.get("TIMEOUT_CLASSIFICATION_THRESHOLDS", [0.5])
+    thresholds = config.get("TIMEOUT_CLASSIFICATION_THRESHOLDS", [0.5]) if not thresholds else thresholds
     classification_frequency = config.get("TIMEOUT_CLASSIFICATION_FREQUENCY", 10)
     cutoff = config.get("MAX_RUNNING_TIME", 600)
 
@@ -250,7 +250,7 @@ def train_continuous_timeout_classifier_feature_ablation_worker(args_queue):
         if args is None:
             break
         train_continuous_timeout_classifier_feature_ablation(*args)
-def run_feature_ablation_study_timeout_classification(config):
+def run_feature_ablation_study_timeout_classification(config, thresholds=None, results_path=None):
     # TODO: Adjust method description
     """
     Run Timeout prediction experiments using a fixed feature collection phase from a config
@@ -265,10 +265,10 @@ def run_feature_ablation_study_timeout_classification(config):
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
 
-    results_path = './results/feature_ablation/feature_ablation_study/'
+    results_path = './results/feature_ablation/feature_ablation_study/' if not results_path else results_path
     os.makedirs(results_path, exist_ok=True)
 
-    thresholds = config.get("TIMEOUT_CLASSIFICATION_THRESHOLDS", [0.5])
+    thresholds = config.get("TIMEOUT_CLASSIFICATION_THRESHOLDS", [0.5]) if not thresholds else thresholds
 
     random_state = config.get("RANDOM_STATE", 42)
 
@@ -296,7 +296,7 @@ def run_feature_ablation_study_timeout_classification(config):
         feature_collection_cutoff = 30
 
         for threshold in thresholds:
-            for verifier in [ABCROWN]:
+            for verifier in SUPPORTED_VERIFIERS:
                 verifier_results_path = os.path.join(experiment_results_path, verifier)
                 os.makedirs(verifier_results_path, exist_ok=True)
                 if verifier == ABCROWN:
@@ -369,29 +369,35 @@ def train_timeout_classifier_feature_ablation_worker(args_queue):
         train_timeout_classifier_feature_ablation(*args)
 
 
-def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5):
+def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5, results_folder=None):
     # todo: change that
     experiments = os.listdir(feature_ablation_study_folder)
     for verifier in SUPPORTED_VERIFIERS:
         table_csv = "Feature Names,"
         table_csv += ",,".join(experiments) + "\n"
-        table_csv += "," + "#Solved.,Time," * len(experiments) + "\n"
+        table_csv += "," + "FP,TP," * len(experiments) + "\n"
+        verifier_differences = {}
+
         for verifier_feature in VERIFIER_FEATURE_MAP[verifier]:
             table_csv += f"{verifier_feature},"
             avg_feature_differences = defaultdict(float)
             running_time_differences = 0
             no_solved_differences = 0
+            no_experiments = len(experiments)
+
             for experiment in experiments:
+                baseline_folder = f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/" if not results_folder else f"{results_folder}/{experiment}/{verifier}"
                 feature_differences = defaultdict(float)
                 if not os.path.exists(
-                        f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/metrics_thresh_{threshold}.json"):
+                        f"./{baseline_folder}/metrics_thresh_{threshold}.json"):
                     table_csv += "-,-,"
+                    no_experiments -= 1
                     continue
-                with open(f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/metrics_thresh_{threshold}.json", "r") as f:
+                with open(f"./{baseline_folder}/metrics_thresh_{threshold}.json", "r") as f:
                     standard_results = json.load(f)
-                standard_results = standard_results["avg"]
+                standard_results = standard_results["sum"]
 
-                with open(f"./{feature_ablation_study_folder}/{experiment}/{verifier}/BASELINE/ecdf_threshold_{threshold}.png.json",
+                with open(f"./{baseline_folder}/ecdf_threshold_{threshold}.png.json",
                           "r") as f:
                     standard_running_times = json.load(f)
                 no_solved_standard = len(
@@ -415,7 +421,7 @@ def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5):
                     feature_running_times = feature_running_times["running_times"]["Timeout Prediction"]
                     feature_running_time = sum([pow(10, running_time) for running_time in feature_running_times])
 
-                feature_results = feature_results["avg"]
+                feature_results = feature_results["sum"]
 
                 for metric in feature_results:
                     avg_feature_differences[metric] += feature_results[metric] - standard_results[metric]
@@ -424,22 +430,121 @@ def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5):
                 running_time_differences += feature_running_time - standard_running_time
                 no_solved_differences += no_solved_feature - no_solved_standard
 
-                table_csv += f"{round(no_solved_feature - no_solved_standard, 2)},{round((feature_running_time - standard_running_time) / 60, 2)},"
-
+                # table_csv += f"{round(no_solved_feature - no_solved_standard, 2)},{round((feature_running_time - standard_running_time) / 60, 2)},"
+                table_csv += f"{round(feature_differences['fp'], 2)}, {round(feature_differences['tp'], 2)},"
             for metric in avg_feature_differences:
-                avg_feature_differences[metric] /= len(experiments)
+                avg_feature_differences[metric] /= no_experiments
 
-            running_time_differences /= len(experiments)
-            no_solved_differences /= len(experiments)
+            verifier_differences[verifier_feature] = avg_feature_differences
 
-            print(
-                f"FEATURE DIFFERENCES FOR {verifier_feature} ON {verifier} \n {json.dumps(avg_feature_differences, indent=4)}")
-            print(f"AVG. RUNNING TIME DIFFERENCE (minutes): {running_time_differences / 60}")
-            print(f"AVG DIFF OF SOLVED INSTANCES: {no_solved_differences}")
+            running_time_differences /= no_experiments
+            no_solved_differences /= no_experiments
+            verifier_differences[verifier_feature]["avg_solved_difference"]  = no_solved_differences
+            verifier_differences[verifier_feature]["avg_running_time_difference"] = running_time_differences
+
+
+            # print(
+            #     f"FEATURE DIFFERENCES FOR {verifier_feature} ON {verifier} \n {json.dumps(avg_feature_differences, indent=4)}")
+            # print(f"AVG. RUNNING TIME DIFFERENCE (minutes): {running_time_differences / 60}")
+            # print(f"AVG DIFF OF SOLVED INSTANCES: {no_solved_differences}")
 
             table_csv += "\n"
 
+        print("METRICS PER EXPERIMENT AND FEATURE")
+        print("--------------------------------------------------------------")
         print(table_csv)
+        print("--------------------------------------------------------------")
+        print("AGGREGATED METRICS")
+        print("--------------------------------------------------------------")
+        print("Feature,TP,FP,#Solved,Time(m)")
+        for feature in verifier_differences:
+            print(f"{feature},  {round(verifier_differences[feature]['tp'], 2)}, {round(verifier_differences[feature]['fp'], 2)}, {round(verifier_differences[feature]['avg_solved_difference'], 2)}, {round(verifier_differences[feature]['avg_running_time_difference'] / 60, 4)}")
+
+
+def create_timeout_termination_table_feature_ablation(results_path, thresholds, verifier=ABCROWN):
+    """
+    Creates table in CSV format for premature termination of presumed timeouts.
+    :param results_path: path with results of experiment
+    :param thresholds: thresholds that should be included in table.
+    :return: table in CSV format
+    """
+    verifier_features = VERIFIER_FEATURE_MAP[verifier]
+    for experiment_group, experiments in experiment_groups.items():
+        for experiment in experiments:
+            for thresh in thresholds:
+                csv = ',,'
+                for threshold in thresholds:
+                    csv += rf"$\theta$={threshold},,,,,,,,,,,,,,"
+                csv += '\n'
+                csv += ',,'
+                for _ in thresholds:
+                    csv += fr"{verifier},,,,," + "\n"
+                csv += "Feature,,Running Time [GPU h],,# Solved,,,\n"
+                experiment_path = f"{results_path}/{experiment}/{verifier}"
+                no_instances = experiment_samples[experiment]
+                print(f"----------------- {experiment} -------------------")
+                # get baseline
+                baseline_results_path = f"./results/results_continuous_timeout_classification/{experiment}/{verifier}"
+                if not os.path.exists(f"{baseline_results_path}/ecdf_threshold_{thresh}.png.json"):
+                    continue
+
+                for feature in ["BASELINE"] + verifier_features:
+                    csv += f'{feature},,'
+                    if feature == "BASELINE":
+                        feature_results_path = baseline_results_path
+                    else:
+                        feature_results_path = f"./{experiment_path}/{feature}"
+                    if not os.path.exists(f"{feature_results_path}/ecdf_threshold_{thresh}.png.json"):
+                        csv += f'-,,-,,,\n'
+                        continue
+                    with open(f"{feature_results_path}/ecdf_threshold_{thresh}.png.json", 'r') as f:
+                        verifier_data = json.load(f)
+                    vanilla_running_times = verifier_data["running_times"]["Vanilla Verifier"]
+                    vanilla_results = verifier_data["results"]["Vanilla Verifier"]
+                    # one of the hustles one has to do because abCROWN did not filter misclassified instances
+                    if no_instances != len(vanilla_results):
+                        misclassified = len(vanilla_results) - no_instances
+                        no_timeouts_vanilla = sum([1 for result in vanilla_results if result == TIMEOUT])
+                        no_solved_vanilla = sum([1 for result in vanilla_results if result != TIMEOUT]) - misclassified
+                        no_verified_vanilla = sum([1 for result in vanilla_results if result == UNSAT])
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.]) - misclassified
+                    else:
+                        no_timeouts_vanilla = sum([1 for result in vanilla_results if result == TIMEOUT])
+                        no_solved_vanilla = sum([1 for result in vanilla_results if result != TIMEOUT])
+                        no_verified_vanilla = sum([1 for result in vanilla_results if result == UNSAT])
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.])
+
+                    wct_vanilla = sum([pow(10, log_running_time) for log_running_time in vanilla_running_times])
+                    wct_timeout_termination = sum(
+                        [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
+
+                    improv_percentage = (wct_timeout_termination / wct_vanilla) * 100
+
+                    solved_difference = no_solved_timeout_termination - no_solved_vanilla
+
+                    if solved_difference < 0:
+                        diff_sign = ""
+                    elif solved_difference > 0:
+                        diff_sign = "$+$"
+                    else:
+                        diff_sign = r"$\pm$"
+
+                    csv += f'{round(wct_timeout_termination / 60 / 60, 2)},({round(improv_percentage)}%),{no_solved_timeout_termination},({diff_sign}{solved_difference}),,'
+
+                    csv += '\n'
+            print(csv)
+
+    return None
 
 
 def train_timeout_classifier_feature_ablation(training_inputs, running_times, results_path,
@@ -569,28 +674,25 @@ def get_correlated_features(config):
     if not experiments:
         experiments = os.listdir(verification_logs_path)
 
-    for experiment in experiments:
-        print(f"------------------------ Experiment {experiment} -----------------------------")
-        # skip hidden files
-        if experiment.startswith("."):
-            continue
-        experiment_logs_path = os.path.join(verification_logs_path, experiment)
-        experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
-        assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
-        experiment_neuron_count = experiment_info.get("neuron_count")
-        assert experiment_neuron_count
+    for verifier in SUPPORTED_VERIFIERS:
+        verifier_features = np.empty(shape=(1, len(VERIFIER_FEATURE_MAP[verifier])))
+        for experiment in experiments:
+            # skip hidden files
+            if experiment.startswith("."):
+                continue
+            experiment_logs_path = os.path.join(verification_logs_path, experiment)
+            experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
+            assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
+            experiment_neuron_count = experiment_info.get("neuron_count")
+            assert experiment_neuron_count
 
-        feature_collection_cutoff = experiment_info.get("first_classification_at",
-                                                        config.get("FEATURE_COLLECTION_CUTOFF", 10))
-        feature_collection_cutoff = 60
-
-        for verifier in SUPPORTED_VERIFIERS:
-            print(f"----------------- {verifier} -------------------")
+            feature_collection_cutoff = experiment_info.get("first_classification_at",
+                                                            config.get("FEATURE_COLLECTION_CUTOFF", 10))
+            feature_collection_cutoff = 30
             if verifier == ABCROWN:
                 abcrown_log_file = os.path.join(experiment_logs_path,
                                                 config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
                 if not os.path.isfile(abcrown_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {abcrown_log_file} not found!")
                     continue
 
                 features, running_times, results, enum_results = load_abcrown_data(
@@ -603,7 +705,6 @@ def get_correlated_features(config):
                 verinet_log_file = os.path.join(experiment_logs_path,
                                                 config.get("VERINET_LOG_NAME", "VERINET.log"))
                 if not os.path.isfile(verinet_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {verinet_log_file} not found!")
                     continue
                 features, running_times, results, enum_results = load_verinet_data(
                     verinet_log_file,
@@ -616,33 +717,43 @@ def get_correlated_features(config):
                 oval_log_file = os.path.join(experiment_logs_path,
                                              config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
                 if not os.path.isfile(oval_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {oval_log_file} not found!")
                     continue
                 features, running_times, results, enum_results = load_oval_bab_data(oval_log_file,
                                                                                     neuron_count=experiment_neuron_count,
                                                                                     feature_collection_cutoff=feature_collection_cutoff,
                                                                                     filter_misclassified=True)
                 feature_names = OVAL_FEATURE_NAMES
-            corr_matrix = np.corrcoef(features, rowvar=False)
-            n = corr_matrix.shape[0]
-            for i in range(n):
-                feature_correlated = False
-                for j in range(i + 1, n):
-                    if abs(corr_matrix[i, j]) > 0.8:
-                        print(f"CORRELATED FEATURES: {feature_names[i]}, {feature_names[j]}: {corr_matrix[i, j]}")
-                        feature_correlated = True
-                        correlated_features.add(feature_names[i])
-                # if not feature_correlated:
-                    # print(f"UNCORRELATED FEATURE: {feature_names[i]}")
-    for feature_names in [ABCROWN_FEATURE_NAMES, VERINET_FEATURE_NAMES, OVAL_FEATURE_NAMES]:
-        print(f"Correlated features: {set.intersection(correlated_features, feature_names)}")
-        print(f"Uncorrelated features: {set(feature_names) - correlated_features}")
+
+            unsolved_instances, = np.where(running_times >= np.log10(feature_collection_cutoff))
+            verifier_features = np.concatenate((verifier_features, features[unsolved_instances]))
+        print(f"----------------- {verifier} -------------------")
+
+        corr_matrix = np.corrcoef(verifier_features, rowvar=False)
+        n = corr_matrix.shape[0]
+        for i in range(n):
+            feature_correlated = False
+            for j in range(i + 1, n):
+                if abs(corr_matrix[i, j]) > 0.6:
+                    print(f"CORRELATED FEATURES: {feature_names[i]}, {feature_names[j]}: {corr_matrix[i, j]}", flush=True)
+                    feature_correlated = True
+                    correlated_features.add(feature_names[i])
+            # if not feature_correlated:
+                # print(f"UNCORRELATED FEATURE: {feature_names[i]}")
+    # for feature_names in [ABCROWN_FEATURE_NAMES, VERINET_FEATURE_NAMES, OVAL_FEATURE_NAMES]:
+    #     print(f"Correlated features: {set.intersection(correlated_features, feature_names)}")
+    #     print(f"Uncorrelated features: {set(feature_names) - correlated_features}")
 
 
 if __name__ == "__main__":
-    run_feature_ablation_study_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
-    eval_feature_ablation_study(
-        feature_ablation_study_folder="./results/feature_ablation/feature_ablation_study",
-        threshold=0.5
-    )
-    # get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)
+    # run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, thresholds=[0.99], results_path='./results/feature_ablation/feature_ablation_continuous_classification/')
+    # eval_feature_ablation_study(
+    #     feature_ablation_study_folder="./results/feature_ablation/feature_ablation_continuous_classification",
+    #     threshold=0.99,
+    #     results_folder="./results/results_continuous_timeout_classification"
+    # )
+    # create_timeout_termination_table_feature_ablation(
+    #     results_path="./results/feature_ablation/feature_ablation_continuous_classification",
+    #     thresholds=[.99],
+    #     verifier=VERINET,
+    # )
+    get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)

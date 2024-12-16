@@ -4,12 +4,14 @@ import os
 import sklearn.preprocessing
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, ticker
 from numpy import ndarray
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 import seaborn as sns
 
+from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from src.parsers.parse_verinet_log import parse_verinet_log
+from src.util.constants import experiment_groups, experiment_samples, SUPPORTED_VERIFIERS
 
 
 def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels=None,
@@ -163,5 +165,85 @@ def create_ecdf_plot(running_times_all_verifiers, results_all_verifiers, filenam
                               verifier, running_time in running_times_all_verifiers.items()}
         }
         json.dump(ecdf_data, f, indent=2)
+
+
+
+def plot_performance_against_theta(config):
+    results_path = config["RESULTS_PATH"]
+    for verifier in SUPPORTED_VERIFIERS:
+        plt_data_wct = []
+        plt_data_solved = []
+        print(f"------------------- {verifier} ---------------")
+        for thresh in config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]:
+            avg_solved = 0
+            avg_wct = 0
+            no_observations = 0
+            for experiment_group, experiments in experiment_groups.items():
+                for experiment in experiments:
+                    experiment_path = f"{results_path}/{experiment}"
+                    no_instances = experiment_samples[experiment]
+                    verifier_results_path = f"./{experiment_path}/{verifier}"
+                    if not os.path.exists(f"{verifier_results_path}/ecdf_threshold_{thresh}.png.json"):
+                        continue
+                    with open(f"{verifier_results_path}/ecdf_threshold_{thresh}.png.json", 'r') as f:
+                        verifier_data = json.load(f)
+                    vanilla_results = verifier_data["results"]["Vanilla Verifier"]
+                    # one of the hustles one has to do because abCROWN did not filter misclassified instances
+                    if no_instances != len(vanilla_results):
+                        misclassified = len(vanilla_results) - no_instances
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.]) - misclassified
+                    else:
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.])
+
+                    wct_timeout_termination = sum(
+                        [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
+
+                    avg_wct += wct_timeout_termination
+                    avg_solved += no_solved_timeout_termination
+                    no_observations += 1
+
+            avg_solved /= no_observations
+            avg_wct /= no_observations
+            plt_data_wct.append(avg_wct / 60 / 60)
+            plt_data_solved.append(avg_solved)
+            print(f"THETA {thresh}: AVG SOLVED {avg_solved} / AVG WCT {avg_wct}")
+
+        # sns.set(style="white")
+        # sns.set_palette("colorblind")
+        sns.set(font_scale=1, style="white")
+        sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+        plt.figure(figsize=(30, 30))
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()  # Create a second axes sharing the x-axis
+        no_solved_plot = ax.plot(list(config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]), plt_data_solved, 'o-', linewidth=2, color="red", label="Avg. # Solved Instances")
+        ax.set_ylabel("# Solved Instances")
+        wct_plot = ax2.plot(list(config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]), plt_data_wct, 'o-', linewidth=2, color='blue', label="Avg. Running Time")
+        ax2.set_ylabel("Running Time [GPU h]")
+        ax.set_xlabel(r"$\theta$")
+        # ax2.set_ylim([min(plt_data_solved) // 10 * 10, max(plt_data_solved) // 10 * 10 + 10])
+        # ax.set_ylim([min(plt_data_wct) // 1, max(plt_data_wct) // 1 + 1])
+        lns = wct_plot + no_solved_plot
+        labs = [l.get_label() for l in lns]
+        ax.legend(lns, labs, loc="upper left")
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(f"{config['RESULTS_PATH']}/theta_distribution_{verifier}.pdf")
+
+
+
+
+if __name__ == "__main__":
+    plot_performance_against_theta(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
+
 
 

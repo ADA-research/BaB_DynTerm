@@ -20,7 +20,8 @@ from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, ABCROWN_FEATURE_NAM
 def beeswarm_checkpoint_coloring(shap_values, max_display=10, order=Explanation.abs.mean(0),
              clustering=None, cluster_threshold=0.5, color=None,
              axis_color="#333333", alpha=1, show=True, log_scale=False,
-             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
+             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"],
+                                 abs=False):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -66,6 +67,8 @@ def beeswarm_checkpoint_coloring(shap_values, max_display=10, order=Explanation.
                 values = np.empty((0, shap_values[fold][checkpoint].values.shape[1]))
                 features = np.empty((0, shap_values[fold][checkpoint].data.shape[1]))
                 feature_names = shap_values[fold][checkpoint].feature_names
+            if abs:
+                shap_values_per_checkpoint = np.abs(shap_values_per_checkpoint)
             values = np.concatenate((values, shap_values_per_checkpoint.values), axis=0)
             features = np.concatenate((features, shap_values_per_checkpoint.data), axis=0)
             checkpoints = checkpoints + [(checkpoint + 1) * 10 for i in range(shap_values_per_checkpoint.shape[0])]
@@ -194,7 +197,8 @@ def beeswarm_checkpoint_coloring(shap_values, max_display=10, order=Explanation.
 def shapley_boxlpot(shap_values, max_display=10, order=Explanation.abs.mean(0),
              clustering=None, cluster_threshold=0.5, color=None,
              axis_color="#333333", alpha=1, show=True, log_scale=False,
-             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
+             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"],
+                    abs=False):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -244,7 +248,10 @@ def shapley_boxlpot(shap_values, max_display=10, order=Explanation.abs.mean(0),
                     values = np.empty((0, shap_values_per_fold[checkpoint].values.shape[1]))
                     features = np.empty((0, shap_values_per_fold[checkpoint].data.shape[1]))
                     feature_names = shap_values_per_fold[checkpoint].feature_names
-                values = np.concatenate((values, shap_values_per_checkpoint.values), axis=0)
+                if abs:
+                    values = np.concatenate((values, np.abs(shap_values_per_checkpoint.values)), axis=0)
+                else:
+                    values = np.concatenate((values, shap_values_per_checkpoint.values), axis=0)
                 features = np.concatenate((features, shap_values_per_checkpoint.data), axis=0)
                 checkpoints = checkpoints + [(checkpoint + 1) * 10 for i in range(shap_values_per_checkpoint.shape[0])]
                 experiments = experiments + [list(shap_values.keys()).index(experiment) for i in range(shap_values_per_checkpoint.shape[0])]
@@ -410,7 +417,8 @@ def aggregate_over_all_benchmarks():
             plot_size=(20,20),
             show=False,
             max_display=1000,
-            color_bar=True if verifier == OVAL else False
+            color_bar=True,
+            abs=True
         )
         # plt.title(f"{VERIFIER_TO_TEX[verifier]}", fontsize=80)
         plt.tight_layout()

@@ -92,17 +92,17 @@ CONFIG_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 15,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 15,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 15
+            "first_classification_at": 10
         }
     }
 }
@@ -149,17 +149,17 @@ CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 15,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 15,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 15
+            "first_classification_at": 10
         }
     }
 }
@@ -204,17 +204,17 @@ CONFIG_TIMEOUT_BASELINE = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 30,
+            "first_classification_at": 10,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 20
+            "first_classification_at": 10
         }
     }
 }

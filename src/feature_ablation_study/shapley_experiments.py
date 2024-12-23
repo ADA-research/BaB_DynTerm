@@ -529,6 +529,4 @@ def train_continuous_timeout_classifier_shapley_worker(args_queue):
         train_continuous_timeout_classifier_shapley(*args)
 
 if __name__ == "__main__":
-    # get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)
-    run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION,
-                                                                 thresholds=[0.99])
+    get_shapley_values_for_timeout_classification(CONFIG_TIMEOUT_CLASSIFICATION)

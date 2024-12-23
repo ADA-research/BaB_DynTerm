@@ -1,7 +1,3 @@
-from experiments.algorithm_selection.config import CONFIG_ADAPTIVE_ALGORITHM_SELECTION, \
-    CONFIG_ADAPTIVE_ALGORITHM_SELECTION_AND_TERMINATION
-from experiments.algorithm_selection.run_algorithm_selection_experiments import \
-    run_algorithm_selection_experiment_from_config
 from experiments.running_time_prediction.config import CONFIG_RUNNING_TIME_REGRESSION, CONFIG_TIMEOUT_CLASSIFICATION, \
     CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from experiments.running_time_prediction.run_running_time_regression_experiments import \
@@ -16,6 +12,3 @@ run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION
 
 run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
 
-# run_algorithm_selection_experiment_from_config(CONFIG_ADAPTIVE_ALGORITHM_SELECTION)
-#
-# run_algorithm_selection_experiment_from_config(CONFIG_ADAPTIVE_ALGORITHM_SELECTION_AND_TERMINATION)

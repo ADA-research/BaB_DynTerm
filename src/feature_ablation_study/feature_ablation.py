@@ -746,14 +746,14 @@ def get_correlated_features(config):
 
 if __name__ == "__main__":
     # run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, thresholds=[0.99], results_path='./results/feature_ablation/feature_ablation_continuous_classification/')
-    # eval_feature_ablation_study(
-    #     feature_ablation_study_folder="./results/feature_ablation/feature_ablation_continuous_classification",
-    #     threshold=0.99,
-    #     results_folder="./results/results_continuous_timeout_classification"
-    # )
-    # create_timeout_termination_table_feature_ablation(
-    #     results_path="./results/feature_ablation/feature_ablation_continuous_classification",
-    #     thresholds=[.99],
-    #     verifier=VERINET,
-    # )
-    get_correlated_features(CONFIG_TIMEOUT_CLASSIFICATION)
+    eval_feature_ablation_study(
+        feature_ablation_study_folder="./results/feature_ablation/feature_ablation_continuous_classification",
+        threshold=0.99,
+        results_folder="./results/results_continuous_timeout_classification"
+    )
+    for verifier in SUPPORTED_VERIFIERS:
+        create_timeout_termination_table_feature_ablation(
+            results_path="./results/feature_ablation/feature_ablation_continuous_classification",
+            thresholds=[.99],
+            verifier=verifier,
+        )

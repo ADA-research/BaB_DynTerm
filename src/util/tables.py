@@ -203,7 +203,6 @@ def create_timeout_termination_table(results_path, thresholds):
                         [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
 
                     improv_percentage = (wct_timeout_termination / wct_vanilla) * 100
-
                     solved_difference = no_solved_timeout_termination - no_solved_vanilla
 
                     if solved_difference < 0:
@@ -214,9 +213,7 @@ def create_timeout_termination_table(results_path, thresholds):
                         diff_sign = r"$\pm$"
 
                     csv += f'{round(wct_timeout_termination / 60 / 60, 2)},({round(improv_percentage)}%),{no_solved_timeout_termination},({diff_sign}{abs(solved_difference)}),,'
-
             csv += '\n'
-
     return csv
 
 

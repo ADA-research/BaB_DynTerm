@@ -5,10 +5,11 @@ from experiments.running_time_prediction.run_running_time_regression_experiments
 from experiments.running_time_prediction.run_timeout_classification_experiments import \
     run_timeout_classification_experiments_from_config
 
+if __name__ == '__main__':
 
-run_running_time_regression_experiments_from_config(CONFIG_RUNNING_TIME_REGRESSION)
+    run_running_time_regression_experiments_from_config(CONFIG_RUNNING_TIME_REGRESSION)
 
-run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
 
-run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
 

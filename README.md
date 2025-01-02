@@ -4,7 +4,7 @@ This is the accompanying repository to the paper:
 
 **Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification**, Konstantin Kaulen, Matthias König,
 Holger H. Hoos.
-To appear in *Proceedings of the 39th AAAI Conference of Artificial Intelligence (AAAI-25)*.
+To appear in *Proceedings of the 39th AAAI Conference on Artificial Intelligence (AAAI-25)*.
 
 **Abstract**: With the rising use of neural networks across various 
 application domains, it becomes increasingly important to ensure
@@ -31,7 +31,7 @@ of instances.
 
 ### Citation
 If you want to cite this work, we kindly ask you to do so using the following BibTex entry:
-```tex
+```
 @inproceedings{KauEtAl25,
     author = {Kaulen, Konstantin and K{\"o}nig, Matthias and Hoos, Holger H},
     title = "Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification",

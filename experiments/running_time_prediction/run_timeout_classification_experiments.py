@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 from pathlib import Path
 
@@ -24,7 +25,6 @@ def run_timeout_prediction_experiment(config: dict):
         experiments = os.listdir(verification_logs_path)
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
-    feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
 
     results_path = config.get("RESULTS_PATH", "./results_running_time_prediction")
     os.makedirs(results_path, exist_ok=True)
@@ -34,11 +34,15 @@ def run_timeout_prediction_experiment(config: dict):
     random_state = config.get("RANDOM_STATE")
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
         assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
         experiment_neuron_count = experiment_info.get("neuron_count")
+        no_classes = experiment_info.get("no_classes", 10)
         assert experiment_neuron_count
         os.makedirs(experiment_results_path, exist_ok=True)
 
@@ -58,7 +62,8 @@ def run_timeout_prediction_experiment(config: dict):
                     features, running_times, results, enum_results = load_abcrown_data(
                         abcrown_log_file,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        neuron_count=experiment_neuron_count
+                        neuron_count=experiment_neuron_count,
+                        no_classes=no_classes,
                     )
                 elif verifier == VERINET:
                     verinet_log_file = os.path.join(experiment_logs_path, config.get("VERINET_LOG_NAME", "VERINET.log"))
@@ -69,7 +74,8 @@ def run_timeout_prediction_experiment(config: dict):
                         verinet_log_file,
                         neuron_count=experiment_neuron_count,
                         feature_collection_cutoff=feature_collection_cutoff,
-                        filter_misclassified=True
+                        filter_misclassified=True,
+                        no_classes=no_classes
                     )
                 elif verifier == OVAL:
                     oval_log_file = os.path.join(experiment_logs_path, config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
@@ -79,7 +85,8 @@ def run_timeout_prediction_experiment(config: dict):
                     features, running_times, results, enum_results = load_oval_bab_data(oval_log_file,
                                                                                         neuron_count=experiment_neuron_count,
                                                                                         feature_collection_cutoff=feature_collection_cutoff,
-                                                                                        filter_misclassified=True)
+                                                                                        filter_misclassified=True,
+                                                                                        no_classes=no_classes)
                 else:
                     # This should never happen!
                     assert 0, "Encountered Unknown Verifier!"
@@ -117,14 +124,19 @@ def run_continuous_timeout_prediction_experiment(config: dict):
 
     random_state = config.get("RANDOM_STATE", 42)
 
+    args_queue = multiprocessing.Queue()
+
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
         assert experiment_info, f"No Experiment Info for experiment {experiment} provided!"
         experiment_neuron_count = experiment_info.get("neuron_count")
         assert experiment_neuron_count
-        first_classification_at = experiment_info.get("first_classification_at", classification_frequency)
+        first_classification_at = experiment_info.get("first_classification_at", config.get("FIRST_CLASSIFICATION_AT", classification_frequency))
 
         no_classes = experiment_info.get("no_classes", 10)
         os.makedirs(experiment_results_path, exist_ok=True)
@@ -157,14 +169,30 @@ def run_continuous_timeout_prediction_experiment(config: dict):
                     assert 0, "Encountered Unknown Verifier!"
 
                 print(f"-------------------------- {experiment} -------------------")
-                train_continuous_timeout_classifier(log_path=log_path, load_data_func=load_data_func,
-                                                    neuron_count=experiment_neuron_count,
-                                                    include_incomplete_results=include_incomplete_results,
-                                                    results_path=verifier_results_path, threshold=threshold,
-                                                    classification_frequency=classification_frequency, cutoff=cutoff,
-                                                    first_classification_at=first_classification_at,
-                                                    no_classes=no_classes,
-                                                    random_state=random_state)
+                args = (
+                    log_path, load_data_func, experiment_neuron_count, include_incomplete_results,
+                    verifier_results_path,
+                    threshold,
+                    classification_frequency, cutoff, first_classification_at, no_classes, random_state)
+                args_queue.put(args)
+
+    procs = [multiprocessing.Process(target=train_continuous_timeout_classifier_worker, args=(args_queue,))
+             for _ in range(10)]
+    for p in procs:
+        p.daemon = True
+        # poison pills
+        args_queue.put(None)
+        p.start()
+
+    [p.join() for p in procs]
+
+
+def train_continuous_timeout_classifier_worker(args_queue):
+    while True:
+        args = args_queue.get()
+        if args is None:
+            break
+        train_continuous_timeout_classifier(*args)
 
 
 def run_timeout_classification_experiments_from_config(config: dict):
@@ -202,6 +230,9 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
     cutoff = config.get("MAX_RUNNING_TIME", 600)
 
     for experiment in experiments:
+        # skip hidden files
+        if experiment.startswith("."):
+            continue
         experiment_results_path = os.path.join(results_path, experiment)
         experiment_logs_path = os.path.join(verification_logs_path, experiment)
         experiment_info = config["EXPERIMENTS_INFO"].get(experiment)
@@ -263,5 +294,6 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 if __name__ == "__main__":
     run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

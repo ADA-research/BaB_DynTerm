@@ -74,13 +74,11 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
     for instance_lines in split_by_instances:
         times_up = False
+        batch_start_time = None
         last_checkpoint_passed = 0
-        batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, percentage_unstables, \
-            cur_global_min, cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains, \
-            tree_depth_min, tree_depth_max, infeasible_nodes, improvement_margin, time_needed_for_branching, \
-            time_needed_for_relu_split, time_since_last_batch = 0, np.inf, -np.inf, -np.inf, \
-            -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, \
-            -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf
+        batch_count, prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables, \
+            cur_global_min, cur_global_max, visited_states, cur_no_domains, \
+            tree_depth, positive_domain_percentage, time_taken_for_last_batch, time_since_last_batch = [0, np.inf] + [-np.inf] * 13
         index_number = -1
         lines = instance_lines.splitlines()
         for index, line in enumerate(lines):
@@ -108,31 +106,35 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
             if times_up:
                 continue
 
-            if "New batch at" in line:
+            if "Elapsed Time" in line:
                 pattern = r'-?\d+\.\d+'
                 match = re.search(pattern, line)
 
                 if match:
                     current_time = float(match.group())
-                    if frequency:
-                        time_since_last_batch = math.ceil(current_time / frequency) * frequency - current_time
-                    elif bab_feature_cutoff and not int(current_time) > bab_feature_cutoff:
-                        time_since_last_batch = bab_feature_cutoff - current_time
+                    if batch_start_time:
+                        time_since_last_batch = current_time - batch_start_time
                     if frequency:
                         batch_count += 1
-                        cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
-                                        improved_min, improved_max, no_unstables, percentage_unstables, cur_global_min,
-                                        cur_global_max, visited_states, cur_no_domains, cur_no_hard_domains,
-                                        infeasible_nodes, improvement_margin, tree_depth_min, tree_depth_max,
-                                        time_needed_for_relu_split, time_needed_for_branching]
+                        cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, positive_domain_percentage, batch_count, time_since_last_batch, time_taken_for_last_batch]
                         if int(current_time) > last_checkpoint_passed + frequency:
                             last_checkpoint_passed = math.floor(current_time / frequency) * frequency
                         features[index_number][last_checkpoint_passed + frequency] = cur_features
 
                     elif int(current_time) > bab_feature_cutoff:
                         times_up = True
-                    else:
-                        batch_count += 1
+
+
+            if "New batch at" in line:
+                pattern = r'-?\d+\.\d+'
+                match = re.search(pattern, line)
+
+                if match:
+                    if batch_start_time:
+                        time_taken_for_last_batch = float(match.group()) - batch_start_time
+                    batch_start_time = float(match.group())
+                    batch_count += 1
 
             if "Initial Bound (Linear Approx.)" in line:
                 pattern = r'-?\d+\.\d*'
@@ -156,13 +158,6 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     improved_max = float(match[1])
                     # print("IMPROVED MAX", improved_max)
 
-            if "N. infeasible nodes" in line:
-                pattern = r'(\d+)'
-                match = re.search(pattern, line)
-
-                if match:
-                    infeasible_nodes = int(match.group(0))
-
             if "Improvement margin for this problem and bounding algo" in line:
                 pattern = r'[-+]?[0-9]*\.[0-9]*'
                 match = re.search(pattern, line)
@@ -178,8 +173,6 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                 if match:
                     no_unstables = int(match.group(1))
                     # print("No. Unstables", no_unstables)
-                    percentage_unstables = no_unstables / total_neuron_count
-                    # print("Percentage Unstables", percentage_unstables)
             if "A batch of relu splits requires" in line:
                 pattern = r'[-+]?[0-9]*\.[0-9]*'
 
@@ -221,22 +214,23 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
                     cur_no_hard_domains = int(match[1])
                     # print("cur no of hard domains", cur_no_hard_domains)
 
-            if "MAX DEPTH:" in line:
+            if "TREE DEPTH:" in line:
                 pattern = r'(\d+)'
                 match = re.findall(pattern, line)
                 if match:
-                    tree_depth_min = int(match[0])
+                    tree_depth = int(match[0])
                     # print("tree depth min", tree_depth_min)
-                    tree_depth_max = int(match[1])
-                    # print("tree depth max", tree_depth_max)
+
+            if "POSITIVE DOMAINS TOTAL PERCENTAGE" in line:
+                pattern = r'[-+]?[0-9]*\.[0-9]*'
+                match = re.search(pattern, line)
+
+                if match:
+                    positive_domain_percentage = float(match.group(0))
 
         if index_number >= 0:
-            cur_features = [batch_count, time_since_last_batch, prediction_margin, initial_min, initial_max,
-                            improved_min, improved_max,
-                            no_unstables, percentage_unstables, cur_global_min, cur_global_max, visited_states,
-                            cur_no_domains, cur_no_hard_domains, infeasible_nodes, improvement_margin,
-                            tree_depth_min, tree_depth_max, time_needed_for_relu_split,
-                            time_needed_for_branching]
+            cur_features = [prediction_margin, initial_min, initial_max, improved_min, improved_max, no_unstables,
+                                        cur_no_domains, visited_states, cur_global_min, cur_global_max, tree_depth, positive_domain_percentage, batch_count, time_since_last_batch, time_taken_for_last_batch]
             if frequency:
                 features[index_number][last_checkpoint_passed + frequency] = cur_features
             else:
@@ -247,8 +241,7 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
         max_checkpoints = int(max([max(instance.keys()) for instance in features.values()]) / frequency)
         combined_feature_dict = defaultdict(list)
         for index in features:
-            last_features = [0, np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf,
-                             -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf]
+            last_features = [0, np.inf] + [-np.inf] * 17
             for checkpoint in range(frequency, (max_checkpoints + 1) * frequency, frequency):
                 checkpoint_features = features[index].get(checkpoint)
                 if not checkpoint_features:
@@ -266,5 +259,5 @@ def get_features_from_verification_log(log_string, bab_feature_cutoff=10, includ
 
 if __name__ == "__main__":
     log_file = load_log_file("./verification_logs/MNIST_9_100/OVAL-BAB.log")
-    features = get_features_from_verification_log(log_file, frequency=10, total_neuron_count=600)
+    features = get_features_from_verification_log(log_file, frequency=10, total_neuron_count=900)
     print(features)

@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, accuracy_score, confusion_matrix, \
-    r2_score, precision_score, recall_score, f1_score
+    r2_score, precision_score, recall_score, f1_score, fbeta_score
 from scipy.stats import spearmanr
 
 from src.util.visualization.diagrams import create_scatter_plot, create_confusion_matrix, create_ecdf_plot
@@ -166,7 +166,7 @@ def eval_timeout_classification_fold(test_predictions, test_labels, test_running
     test_labels = test_labels[unsolved_instances]
     test_predictions = test_predictions[unsolved_instances]
     test_acc = accuracy_score(test_labels, test_predictions)
-    print("ACC ON VALIDATION DATA:", test_acc)
+    print("ACC ON TEST SET:", test_acc)
 
     test_confusion_matrix = confusion_matrix(test_predictions, test_labels)
 
@@ -203,6 +203,8 @@ def eval_timeout_classification_fold(test_predictions, test_labels, test_running
         "tnr": float(tnr),
         "fnr": float(fnr),
         "f1_score": f1_score(test_labels, test_predictions),
+        "f0.5_score": fbeta_score(test_labels, test_predictions, beta=0.5),
+        "f2_score": fbeta_score(test_labels, test_predictions, beta=2),
         "precision": precision_score(test_labels, test_predictions),
         "recall": recall_score(test_labels, test_predictions)
     }
@@ -242,11 +244,15 @@ def eval_final_timeout_classification(predictions, verification_results, timeout
         sum_metrics["tn"] += fold_metrics["tn"]
         sum_metrics["fn"] += fold_metrics["fn"]
 
-    sum_metrics["tpr"] = sum_metrics["tp"] / (sum_metrics["tp"] + sum_metrics["fn"])
-    sum_metrics["tnr"] = sum_metrics["tn"] / (sum_metrics["tn"] + sum_metrics["fp"])
-    sum_metrics["fpr"] = sum_metrics["fp"] / (sum_metrics["fp"] + sum_metrics["tn"])
-    sum_metrics["fnr"] = sum_metrics["fn"] / (sum_metrics["fn"] + sum_metrics["tp"])
-    metrics["sum"] = sum_metrics
+    try:
+        sum_metrics["tpr"] = sum_metrics["tp"] / (sum_metrics["tp"] + sum_metrics["fn"])
+        sum_metrics["tnr"] = sum_metrics["tn"] / (sum_metrics["tn"] + sum_metrics["fp"])
+        sum_metrics["fpr"] = sum_metrics["fp"] / (sum_metrics["fp"] + sum_metrics["tn"])
+        sum_metrics["fnr"] = sum_metrics["fn"] / (sum_metrics["fn"] + sum_metrics["tp"])
+        metrics["sum"] = sum_metrics
+    except ZeroDivisionError as e:
+        metrics["sum"] = {}
+        print("ZERO DIVISION ERROR DURING SUM CALCULATION!")
 
     # this could be so easy, but unfortunately we have to deal with potentially undefined metrics!
     no_observations_per_metric = {}

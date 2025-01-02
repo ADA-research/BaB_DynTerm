@@ -1,5 +1,7 @@
-numpy
-scikit-learn
-pandas
-matplotlib
-seaborn
+numpy~=2.0.0
+scikit-learn~=1.5.1
+pandas~=2.2.2
+matplotlib~=3.9.1
+seaborn~=0.13.2
+scipy~=1.13.1
+shap~=0.46.0

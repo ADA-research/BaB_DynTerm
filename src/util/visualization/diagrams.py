@@ -4,12 +4,15 @@ import os
 import sklearn.preprocessing
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, ticker
 from numpy import ndarray
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 import seaborn as sns
 
+from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from src.parsers.parse_verinet_log import parse_verinet_log
+from src.util.constants import experiment_groups, experiment_samples, SUPPORTED_VERIFIERS, VERIFIER_TO_TEX, \
+    ALL_EXPERIMENTS
 
 
 def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels=None,
@@ -92,6 +95,7 @@ def create_scatter_plot(predicted_runtimes, real_runtimes, satisfiability_labels
 
     # Display the plot
     plt.savefig(filename)
+    plt.close()
 
 
 def create_confusion_matrix(predictions, labels, filename="./confusion_matrix.png"):
@@ -163,4 +167,231 @@ def create_ecdf_plot(running_times_all_verifiers, results_all_verifiers, filenam
         }
         json.dump(ecdf_data, f, indent=2)
 
+
+def plot_performance_against_theta(config):
+    results_path = config["RESULTS_PATH"]
+    for verifier in SUPPORTED_VERIFIERS:
+        plt_data_wct = []
+        plt_data_solved = []
+        print(f"------------------- {verifier} ---------------")
+        for thresh in config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]:
+            avg_solved = 0
+            avg_wct = 0
+            no_observations = 0
+            for experiment_group, experiments in experiment_groups.items():
+                for experiment in experiments:
+                    experiment_path = f"{results_path}/{experiment}"
+                    no_instances = experiment_samples[experiment]
+                    verifier_results_path = f"./{experiment_path}/{verifier}"
+                    if not os.path.exists(f"{verifier_results_path}/ecdf_threshold_{thresh}.png.json"):
+                        continue
+                    with open(f"{verifier_results_path}/ecdf_threshold_{thresh}.png.json", 'r') as f:
+                        verifier_data = json.load(f)
+                    vanilla_results = verifier_data["results"]["Vanilla Verifier"]
+                    # one of the hustles one has to do because abCROWN did not filter misclassified instances
+                    if no_instances != len(vanilla_results):
+                        misclassified = len(vanilla_results) - no_instances
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.]) - misclassified
+                    else:
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.])
+
+                    wct_timeout_termination = sum(
+                        [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
+
+                    avg_wct += wct_timeout_termination
+                    avg_solved += no_solved_timeout_termination
+                    no_observations += 1
+
+            avg_solved /= no_observations
+            avg_wct /= no_observations
+            plt_data_wct.append(avg_wct / 60 / 60)
+            plt_data_solved.append(avg_solved)
+            print(f"THETA {thresh}: AVG SOLVED {avg_solved} / AVG WCT {avg_wct}")
+
+        # sns.set(style="white")
+        # sns.set_palette("colorblind")
+        sns.set(font_scale=1, style="white")
+        sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+        plt.figure(figsize=(30, 30))
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()  # Create a second axes sharing the x-axis
+        no_solved_plot = ax.plot(list(config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]), plt_data_solved, 'o-', linewidth=2, color="red", label="Avg. # Solved Instances")
+        ax.set_ylabel("# Solved Instances")
+        wct_plot = ax2.plot(list(config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]), plt_data_wct, 'o-', linewidth=2, color='blue', label="Avg. Running Time")
+        ax2.set_ylabel("Running Time [GPU h]")
+        ax.set_xlabel(r"$\theta$")
+        # ax2.set_ylim([min(plt_data_solved) // 10 * 10, max(plt_data_solved) // 10 * 10 + 10])
+        # ax.set_ylim([min(plt_data_wct) // 1, max(plt_data_wct) // 1 + 1])
+        lns = wct_plot + no_solved_plot
+        labs = [l.get_label() for l in lns]
+        ax.legend(lns, labs, loc="upper left")
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(f"{config['RESULTS_PATH']}/theta_distribution_{verifier}.pdf")
+
+
+def create_ecdf_for_presentation():
+    """
+    Creates an ECDF plot of running times of different verifiers
+    :param running_times_all_verifiers: dict containing running times of all verifiers
+    :param results_all_verifiers: dict containing verification results of all verifiers
+    :param filename: filename to save plot to
+    """
+
+    benchmark_to_tex = {
+        "MNIST_9_100": "MNIST 8 100",
+        "CIFAR_RESNET_2B": "CIFAR-10 ResNet 2B",
+        "VIT": "CIFAR-10 Vision Transformer",
+        "TINY_IMAGENET": "Tiny ImageNet ResNet Med"
+    }
+
+    for benchmark in ['TINY_IMAGENET', 'MNIST_9_100', "CIFAR_RESNET_2B", "VIT"]:
+
+        for verifier in ['ABCROWN']:
+            if not os.path.exists(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json"):
+                continue
+            with open(f'./results/results_continuous_timeout_classification/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json', "r") as f:
+                data = json.load(f)
+
+            our_results = data['results']['Timeout Prediction']
+            vanilla_results = data['results']['Vanilla Verifier']
+            our_running_times = data['running_times']['Timeout Prediction']
+            vanilla_running_times = data['running_times']['Vanilla Verifier']
+
+            sns.set(style="whitegrid")
+            sns.set_palette("dark")
+            sns.set(font_scale=3)
+            sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+            plt.figure(figsize=(20, 20))
+            max_time_taken = 0
+
+            running_times_plot = []
+            time_taken = 0
+            unsolved = 0
+
+            # Compute the cumulative times
+            for running_time, result in zip(vanilla_running_times, vanilla_results):
+                time_taken += pow(10, running_time)
+                if result not in [2, None]:
+                    running_times_plot.append(time_taken)
+                else:
+                    unsolved += 1
+
+            max_time_taken = max([max_time_taken, np.log10(time_taken)])
+
+            # Sort running times and compute cumulative proportion
+            running_times_plot = np.sort(running_times_plot)
+            cumulative_proportion = np.arange(1, len(running_times_plot) + 1) / (len(running_times_plot) + unsolved)
+
+            # Plot using sns.lineplot
+            ax = sns.lineplot(x=running_times_plot, y=cumulative_proportion,
+                              label=f"{VERIFIER_TO_TEX[verifier]}", linewidth=5)
+
+            line_color = ax.lines[-1].get_color()  # Get the last line's color
+
+            plt.scatter(running_times_plot[-1], cumulative_proportion[-1], s=200, marker='s', color=line_color)
+
+            running_times_plot = []
+            time_taken = 0
+            unsolved = 0
+
+            # Compute the cumulative times
+            for running_time, result in zip(our_running_times, our_results):
+                time_taken += pow(10, running_time)
+                if result not in [2, None]:
+                    running_times_plot.append(time_taken)
+                else:
+                    unsolved += 1
+
+            max_time_taken = max([max_time_taken, np.log10(time_taken)])
+
+            # Sort running times and compute cumulative proportion
+            running_times_plot = np.sort(running_times_plot)
+            cumulative_proportion = np.arange(1, len(running_times_plot) + 1) / (len(running_times_plot) + unsolved)
+
+            # Plot using sns.lineplot
+            ax = sns.lineplot(x=running_times_plot, y=cumulative_proportion,
+                              label=f"{VERIFIER_TO_TEX[verifier]} w/ Dynamic Termination", linewidth=5)
+            line_color = ax.lines[-1].get_color()  # Get the last line's color
+
+            plt.scatter(running_times_plot[-1], cumulative_proportion[-1], s=200, marker='s', color=line_color)
+
+            plt.xlim(10 ** -0.0000001, pow(10, max_time_taken + .1))
+            plt.ylim(0, 1)
+            plt.xscale("symlog", linthresh=1000)
+            plt.xlabel('Total Running Time [GPU s]')
+            plt.ylabel('Proportion of Solved Instances')
+            plt.legend(loc="upper left")
+
+            ax.set_title(f"Benchmark: {benchmark_to_tex[benchmark]}", pad=20)
+
+            plt.tight_layout()
+
+            plt.savefig(f"./ECDF_{benchmark}_{verifier}.pdf")
+            plt.close()
+            sns.reset_defaults()
+
+def create_bar_plots_presentation():
+    # Sample data
+    benchmarks = ALL_EXPERIMENTS
+    tools = SUPPORTED_VERIFIERS
+    metrics = ['precision', 'recall', 'test_acc',]
+
+    sns.set(style="whitegrid")
+    sns.set(font_scale=3)
+    sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+    plt.figure(figsize=(20, 30))
+
+    metric_to_tex = {
+        "test_acc": "Accuracy",
+        "precision": "Precision",
+        "recall": "Recall",
+    }
+
+    data_list = []
+    for benchmark in benchmarks:
+        for verifier in tools:
+            if not os.path.exists(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/metrics_thresh_0.99.json"):
+                continue
+            with open(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/metrics_thresh_0.99.json", "r") as f:
+                data = json.load(f)
+
+            data_list = data_list + [{
+                'Benchmark': benchmark,
+                'Verification Tool': VERIFIER_TO_TEX[verifier],
+                "Metric": metric_to_tex[metric],
+                'Value': data['avg'][metric]
+            } for metric in metrics]
+    # data_list = [
+    #     {'Benchmark': b, 'Tool': t, 'Metric': m, 'Value': data[i, j, k]}
+    #     for i, b in enumerate(benchmarks)
+    #     for j, t in enumerate(tools)
+    #     for k, m in enumerate(metrics)
+    # ]
+    df = pd.DataFrame(data_list)
+    ax = sns.boxplot(x="Metric", y="Value",
+                hue="Verification Tool", palette='deep',
+                data=df, linewidth=3, showfliers=True, fliersize=15, flierprops={'marker': 'o', 'markerfacecolor': 'white', 'markeredgecolor': 'black'},
+                fill=True)
+    sns.despine(offset=10, trim=True)
+    sns.move_legend(ax, loc='lower left')
+    # plt.legend(loc="upper right")
+    # Adjust layout and display the figure
+    plt.tight_layout()
+    ax.set(xlabel=None, ylabel=None)
+    plt.savefig(f"./boxplot_tab_2.pdf")
+
+if __name__ == "__main__":
+    create_ecdf_for_presentation()
+    create_bar_plots_presentation()
 

@@ -230,8 +230,6 @@ def plot_performance_against_theta(config):
         wct_plot = ax2.plot(list(config["TIMEOUT_CLASSIFICATION_THRESHOLDS"]), plt_data_wct, 'o-', linewidth=2, color='blue', label="Avg. Running Time")
         ax2.set_ylabel("Running Time [GPU h]")
         ax.set_xlabel(r"$\theta$")
-        # ax2.set_ylim([min(plt_data_solved) // 10 * 10, max(plt_data_solved) // 10 * 10 + 10])
-        # ax.set_ylim([min(plt_data_wct) // 1, max(plt_data_wct) // 1 + 1])
         lns = wct_plot + no_solved_plot
         labs = [l.get_label() for l in lns]
         ax.legend(lns, labs, loc="upper left")

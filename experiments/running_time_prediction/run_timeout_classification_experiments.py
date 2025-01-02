@@ -124,6 +124,8 @@ def run_continuous_timeout_prediction_experiment(config: dict):
 
     random_state = config.get("RANDOM_STATE", 42)
 
+    num_workers = config.get("NUM_WORKERS", 4)
+
     args_queue = multiprocessing.Queue()
 
     for experiment in experiments:
@@ -177,7 +179,7 @@ def run_continuous_timeout_prediction_experiment(config: dict):
                 args_queue.put(args)
 
     procs = [multiprocessing.Process(target=train_continuous_timeout_classifier_worker, args=(args_queue,))
-             for _ in range(10)]
+             for _ in range(num_workers)]
     for p in procs:
         p.daemon = True
         # poison pills

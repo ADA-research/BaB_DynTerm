@@ -1,12 +1,47 @@
 # Running Time Prediction and Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification
 
-This is the accompanying repository to the master thesis 
-"Algorithm Selection and Running Time Prediction for Branch-and-Bound-based Neural Network Verification" written by
-Konstantin Kaulen at the chair of AI Methodology (i14) at RWTH Aachen.
+This is the accompanying repository to the paper:
 
-This thesis was supervised by Prof. Dr. Holger Hoos (RWTH Aachen, Leiden University) and Matthias König M. Sc. (Leiden University).
+**Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification**, Konstantin Kaulen, Matthias König,
+Holger H. Hoos.
+To appear in *Proceedings of the 39th AAAI Conference of Artificial Intelligence (AAAI-25)*.
 
+**Abstract**: With the rising use of neural networks across various 
+application domains, it becomes increasingly important to ensure
+that they do not exhibit dangerous or undesired behaviour. In
+light of this, several neural network robustness verification 
+algorithms have been developed, among which methods based
+on Branch and Bound (BaB) constitute the current state of the
+art. However, these algorithms still require immense 
+computational resources. In this work, we seek to reduce this cost
+by leveraging running time prediction techniques, thereby 
+allowing for more efficient resource allocation and use.
+Towards this end, we present a novel method that 
+dynamically predicts whether a verification instance can be solved
+in the remaining time budget available to the verification algorithm. 
+We introduce features describing BaB-based verification 
+instances and use these to construct running time,
+and more specifically, timeout prediction models. We 
+leverage these models to terminate runs on instances early in the
+verification process that would otherwise result in a timeout.
+Overall, using our method, we were able to reduce the 
+total running time by 64% on average compared to the standard
+verification procedure, while certifying a comparable number
+of instances.
 
+### Citation
+If you want to cite this work, we kindly ask you to do so using the following BibTex entry:
+```tex
+@inproceedings{KauEtAl25,
+    author = {Kaulen, Konstantin and K{\"o}nig, Matthias and Hoos, Holger H},
+    title = "Dynamic Algorithm Termination for Branch-and-Bound-based Neural Network Verification",
+    booktitle = "To appear in Proceedings of the 39th AAAI Conference on Artificial Intelligence (AAAI-25)",
+    year = "2025",
+    pages = "1--9"
+}
+```
+
+## Structure
 
 The repository includes the following modules:
 
@@ -16,7 +51,6 @@ The configuration files will be explained in more detail later.
 scenarios such as predicting running times using regression models,prematurely terminating unsolvable instances or
 to select the best-performing algorithm on a per-instance basis.
 The `src` module contains the following submodules:
-    - `algorithm_selection`:  Code to evaluate our feature's capabilities in tackling the algorithm selection task.
     - `eval`: Code to evaluate experiment results using several metrics. 
     - `parsers` Code to obtain feature values by parsing log files of the examined verification tools.
     - `running_time_prediction`: Code to evaluate our feature's capabilities in the context of running time 
@@ -24,52 +58,74 @@ The `src` module contains the following submodules:
     - `util` Several helpful functions and constants, e.g. to load or merge log files. Additionally, it includes 
   a module that creates visualisations of obtained results, e.g. Scatter- or ECDF-Plots.
 
-- `verification_logs` Includes the logs obtained by running the verification tools on the benchmarks described in
-the paper.
-
 -----------------------------------------------------------------------------------------------------
 
-## Reproduction of Thesis Results
+## Getting Started
 Perform the following steps in a terminal. We give instructions for UNIX-based systems, but the procedure
-is very similar on Windows.
+is very similar on Windows. All steps assume a present installation of Python 3.11.
 
-Make sure to have Git LFS (https://git-lfs.com/installed) installed to obtain the original verification logs that form 
-the basis to all conducted experiments.
-Make sure to download the verification logs by running `git lfs pull`.
-
-To setup the repository perform the following steps:
+First, setup the dependencies:
 1. Create `venv` by running `python3 -m venv ./venv` and activate it (`source ./venv/bin/activate`)
 2. Install needed dependencies
    1. `pip3 install -r requirements.txt`
 
-Then you can reproduce all experiment results by executing `python3 run_all_experiments.py`.
+Then, download the log files obtained by running the verification systems on the respective benchmarks.
+We use those files to extract the instance features.
 
-After successful termination of the script, you should find these folders under `./results`
-- `results_running_time_regression` corresponding to the results presented in Section 5.1 - Running Time Regression
-- `results_timeout_classification` corresponding to the results presented in Section 5.2.1 - Fixed Feature Collection Phase
-- `results_continuous_timeout_classification` corresponding to the results presented in Section 5.2.2 - Continuous Feature Collection Phase
-- `results_dynamic_algorithm_selection` corresponding to the results presented in Section 5.4.1
-- `results_dynamic_algorithm_selection_with_termination` corresponding to the results presented in Section 5.4.2
+```bash
+wget https://rwth-aachen.sciebo.de/s/a6c4VlYRRgQE4st/download -O verification_logs.zip
+unzip verification_logs.zip
+```
+
+## Reproduction of Results
+
+### Main Paper
+
+You can reproduce all experiment results presented in the main paper by executing `python3 run_experiments_main_paper.py`.
+
+After successful termination of the script, you should find the folder `results_continuous_timeout_classification` under `./results`
 
 These folders include plots (Scatter Plots, ECDF Plots, Confusion Matrices) as well as metrics per fold and average metrics in `metrics.json`
 (in case of different thresholds `metrics_thresh_{thresh}.json`.
-Notice, that the scatter plots provided in Figure A.1 (Appendix) are created under
-`results/running_time_regression/{experiment_name}/{verifier}/scatter_plot.pdf`.
 
-Finally, you can create the tables displayed in the paper by running `python3 create_all_tables.py`.
+Finally, you can create the tables displayed in the paper by running `python3 create_tables_main_paper.py`.
 Notice, that the `results` folder must be filled already before creating the corresponding tables.
 After the script ran successfully, you find the folder `tables` populated with csv files corresponding to the tables of
 the paper.
 
 The mapping of the created `.csv` files to the tables in the paper is as follows:
 
-- `table_running_time_regression.csv` - Table 5.1
-- `table_timeouts_fixed_feature_collection.csv` - Table 5.2
-- `table_timeouts_continuous_feature_collection_{theta}.csv` - Table 5.3. Notice, that we create a separate
-file for each threshold shown in the Table.
-- `table_timeout_termination_{theta}.csv` - Table 5.4. Again, we crate a separate file for each threshold.
-- `table_algorithm_selection.csv` - Table 5.6
-- `table_algorithm_selection_and_termination.csv` - Table 5.7
+- `benchmark_overview.csv` - Table 1
+- `table_timeouts_continuous_feature_collection_0.99.csv` - Table 2
+- `table_timeout_termination_0.99.csv` - Table 3
+
+
+### Appendix
+Please run the running time regression experiments, the experiment for different choices of $\theta$
+and the Shapley Value study by executing `python3 run_experiments_appendix.py`. 
+
+The plots corresponding to Figures 2,3 and 4 can be found under `results/shapley_value_study/shapley_values_aggregated_{verifier}.png`.
+The plots in Figure 5 are saved under `results/results_running_time_regression/{BENCHMARK}/{VERIFIER}/scatter_plot.pdf`.
+
+Then execute `create_tables_appendix.py` to create the tables in the Appendix:
+- `table_timeout_termination_{0.5,0.9}.csv` - Appendix, Table 2
+- `table_running_time_regression.csv` - Appendix, Table 3
+
+Finally, to create the plots in Figure 1 of the Appendix, please execute `run_theta_study.py`. The resulting plots
+can then be found in `results/resu.ts/continuous_timeout_classification/theta_distribution_{VERIFIER}.pdf`. Be aware,
+that this script runs the experiments for every $\theta$ between 0.5 and 1 with a step size of 0.01, so it is quite
+resource intensive.
+
+### Feature Ablation
+Please run `run_feature_ablation.py` to conduct the feature ablation study. After that,
+you will find the results of the study in `./results/feature_ablation/feature_ablation_continuous_classification`.
+There are separate tables per verifier and benchmark, showing the effects the exclusion of one feature has in comparison
+to the baseline, where all features are used to make predictions. Those tables are named `feature_ablation_{verifier}_{benchmark}.csv`.
+In addition, the tables named `feature_ablation_average_{verifier}.csv` hold the results aggregated as averages over all 
+benchmarks for each verifier. Notice though, that this aggregation is not ultimately conclusive, since
+several features are more important on some benchmarks than on others. This nuance often get lost when looking 
+at the average importance.
+
 
 --------------------------------------------------------------------------------------------------------------
  ## Experiment Configurations
@@ -77,8 +133,7 @@ file for each threshold shown in the Table.
 If you want to run your own experiments using the presented approach, you can add your own configuration in 
 `experiments/running_time_prediction/config.py` and then run the respective experiment by calling 
 `run_running_time_regression_experiments_from_config` or `run_timeout_classification_experiments_from_config` respectively.
-Analogously, algorithm selection experiment configurations and run scripts can be found in the `experiments/algorithm_selection`
-folder.
+
 The different possibilities for adjusting the experiments will now be explained in more detail:
 
 ### Running Time Regression
@@ -150,7 +205,7 @@ CONFIG_RUNNING_TIME_REGRESSION = {
 }
 ```
 
-### Timeout Prediction
+### Timeout Prediction / Termination
 ```python
 CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
     # Path that holds logs of verification runs including features
@@ -205,86 +260,14 @@ CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION = {
         },
         "TINY_IMAGENET": {
             "neuron_count": 172296,
-            "first_classification_at": 30,
             "no_classes": 200
         },
         "CIFAR_100": {
             "neuron_count": 55460,
-            "first_classification_at": 30,
             "no_classes": 100
         },
         "VIT": {
             "neuron_count": 2760,
-            "first_classification_at": 20
-        }
-    }
-}
-```
-
-### Algorithm Selection
-```python
-CONFIG_ADAPTIVE_ALGORITHM_SELECTION = {
-    # Path that holds logs of verification runs including features
-    "VERIFICATION_LOGS_PATH": "./verification_logs/",
-    # name of log files of the respective verifiers
-    # the program expects a folder structure of VERIFICATION_LOGS_PATH/{experiment_name}/ABCROWN_LOG_NAME for example
-    "ABCROWN_LOG_NAME": "abCROWN.log",
-    "OVAL_BAB_LOG_NAME": "OVAL-BAB.log",
-    "VERINET_LOG_NAME": "VERINET.log",
-    # path to store results to
-    "RESULTS_PATH": "./results/results_dynamic_algorithm_selection",
-    # subfolders from VERIFICATION_LOGS_PATH to run experiments for. If empty array, run experiment for all found subfolders.
-    "INCLUDED_EXPERIMENTS": [],
-    # frequency of checkpoints at which algorithm selection is performed
-    "ALGORITHM_SELECTION_FREQUENCY": 10,
-    # maximum running time
-    "MAX_RUNNING_TIME": 600,
-    # confidence thresholds that must be exceeded s.t. a prediction counts
-    "SELECTION_THRESHOLDS": [0.5, 0.99],
-    "STOP_PREDICTED_TIMEOUTS": False,
-    # fixed random state in fold creation, random forest and numpy. This leads to reproducibility of results, change if you like to!
-    "RANDOM_STATE": 42,
-    # Additional Info for each experiment, i.e. neuron count, no_classes and adjusted feature_collection cutoffs (first_classification_at).
-    # the default value for no. classes is 10 and the default value for first_classification_at is ALGORITHM_SELECTION_FREQUENCY (see above)
-    "EXPERIMENTS_INFO": {
-        "MNIST_6_100": {
-            "neuron_count": 510,
-            # default is no_classes=10 for CIFAR-10 and MNIST
-        },
-        "MNIST_9_100": {
-            "neuron_count": 810
-        },
-        "MNIST_CONV_BIG": {
-            "neuron_count": 48064
-        },
-        "MNIST_CONV_SMALL": {
-            "neuron_count": 3604
-        },
-        "CIFAR_RESNET_2B": {
-            "neuron_count": 6244
-        },
-        "OVAL21": {
-            "neuron_count": 6244
-        },
-        "MARABOU": {
-            "neuron_count": 2568
-        },
-        "SRI_RESNET_A": {
-            "neuron_count": 9316
-        },
-        "TINY_IMAGENET": {
-            "neuron_count": 172296,
-            "first_classification_at": 30,
-            "no_classes": 200
-        },
-        "CIFAR_100": {
-            "neuron_count": 55460,
-            "first_classification_at": 30,
-            "no_classes": 100
-        },
-        "VIT": {
-            "neuron_count": 2760,
-            "first_classification_at": 20
         }
     }
 }

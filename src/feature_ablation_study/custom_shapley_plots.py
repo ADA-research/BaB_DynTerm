@@ -392,8 +392,7 @@ def shapley_boxlpot(shap_values, max_display=10, order=Explanation.abs.mean(0),
         return pl.gca()
 
 
-def aggregate_over_all_benchmarks():
-    results_path = "./results/feature_ablation/shapley_continuous_classification"
+def aggregate_over_all_benchmarks(results_path="./results/feature_ablation/shapley_continuous_classification"):
     experiments = os.listdir(results_path)
     for verifier in SUPPORTED_VERIFIERS:
         # color_bar_plotted = False
@@ -404,14 +403,6 @@ def aggregate_over_all_benchmarks():
             with open(f"{results_path}/{experiment}/{verifier}/shapley_values.pkl", "rb") as f:
                 shapley_values = pickle.load(f)
             experiment_shapleys[experiment] = shapley_values
-            # beeswarm_checkpoint_coloring(
-            #     shapley_values,
-            #     max_display=100,
-            #     plot_size=(20,20),
-            #     show=False,
-            #     color_bar=not color_bar_plotted,
-            # )
-            # color_bar_plotted = True
         shapley_boxlpot(
             experiment_shapleys,
             plot_size=(20,20),
@@ -420,11 +411,10 @@ def aggregate_over_all_benchmarks():
             color_bar=True,
             abs=True
         )
-        # plt.title(f"{VERIFIER_TO_TEX[verifier]}", fontsize=80)
         plt.tight_layout()
         plt.savefig(f"{results_path}/shapley_values_aggregated_{verifier}.png")
         plt.close()
 
 
 if __name__ == "__main__":
-    aggregate_over_all_benchmarks()
+    aggregate_over_all_benchmarks(results_path='./results/shapley_value_study')

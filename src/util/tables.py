@@ -3,7 +3,8 @@ import os
 
 import numpy as np
 
-from src.util.constants import experiment_groups, TIMEOUT, UNSAT, SUPPORTED_VERIFIERS, experiment_samples
+from src.util.constants import experiment_groups, TIMEOUT, UNSAT, SUPPORTED_VERIFIERS, experiment_samples, \
+    VERIFIER_FEATURE_MAP, ABCROWN
 
 
 def create_running_time_regression_table(results_path):
@@ -74,7 +75,6 @@ def create_benchmark_overview_table(results_path):
     """
     Creates table in CSV format for premature termination of presumed timeouts.
     :param results_path: path with results of experiment
-    :param thresholds: thresholds that should be included in table.
     :return: table in CSV format
     """
     thresholds = [0.99]
@@ -217,73 +217,89 @@ def create_timeout_termination_table(results_path, thresholds):
     return csv
 
 
-def create_algorithm_selection_table(results_path, thresholds):
+def create_timeout_termination_table_feature_ablation(results_path, thresholds, verifier=ABCROWN):
     """
-    Creates table in CSV format for algorithm selection results.
+    Creates table in CSV format for premature termination of presumed timeouts.
     :param results_path: path with results of experiment
     :param thresholds: thresholds that should be included in table.
     :return: table in CSV format
     """
-    csv = r"$\theta$,,0.5,,,,,,0.99,,,,,," + "\n"
-    csv += "Benchmark,, Running Time [GPU h],,# Solved,,Portfolio [%],,Running Time [GPU h],,# Solved,,Portfolio [%],\n"
-    improvements = []
+    verifier_features = VERIFIER_FEATURE_MAP[verifier]
     for experiment_group, experiments in experiment_groups.items():
         for experiment in experiments:
-            if experiment == "VIT":
-                continue
-            csv += f'{experiment},,'
-            no_instances = experiment_samples[experiment]
             for thresh in thresholds:
-                experiment_path = f"./{results_path}/{experiment}"
-                if not os.path.exists(f"{experiment_path}/ecdf_threshold_{thresh}.png.json"):
-                    csv += f'-,-,'
+                csv = ',,'
+                for threshold in thresholds:
+                    csv += rf"$\theta$={threshold},,,,,,,,,,,,,,"
+                csv += '\n'
+                csv += ',,'
+                for _ in thresholds:
+                    csv += fr"{verifier},,,,," + "\n"
+                csv += "Excluded Feature,,Running Time [GPU h],,# Solved,,,\n"
+                experiment_path = f"{results_path}/{experiment}/{verifier}"
+                no_instances = experiment_samples[experiment]
+                print(f"----------------- {experiment} -------------------")
+                # get baseline
+                baseline_results_path = f"./results/results_continuous_timeout_classification/{experiment}/{verifier}"
+                if not os.path.exists(f"{baseline_results_path}/ecdf_threshold_{thresh}.png.json"):
                     continue
-                with open(f"{experiment_path}/ecdf_threshold_{thresh}.png.json", 'r') as f:
-                    verifier_data = json.load(f)
-                # TODO: This should not be hardcoded but find the SBS!
-                vanilla_running_times = verifier_data["running_times"]["ABCROWN"]
-                vanilla_results = verifier_data["results"]["ABCROWN"]
-                misclassified = len(vanilla_results) - no_instances
-                no_timeouts_vanilla = sum([1 for result in vanilla_results if result == TIMEOUT])
-                no_solved_vanilla = sum([1 for result in vanilla_results if result != TIMEOUT]) - misclassified
-                no_verified_vanilla = sum([1 for result in vanilla_results if result == UNSAT])
-                timeout_termination_running_times = verifier_data["running_times"]["Algorithm Selection"]
-                timeout_termination_results = verifier_data["results"]["Algorithm Selection"]
-                no_timeouts_timeout_termination = sum(
-                    [1 for result in timeout_termination_results if result == 2.])
-                no_solved_timeout_termination = sum(
-                    [1 for result in timeout_termination_results if result != 2.]) - misclassified
 
-                wct_vanilla = sum([pow(10, log_running_time) for log_running_time in vanilla_running_times])
-                wct_timeout_termination = sum(
-                    [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
+                for feature in ["BASELINE"] + verifier_features:
+                    csv += f'{feature},,'
+                    if feature == "BASELINE":
+                        feature_results_path = baseline_results_path
+                    else:
+                        feature_results_path = f"./{experiment_path}/{feature}"
+                    if not os.path.exists(f"{feature_results_path}/ecdf_threshold_{thresh}.png.json"):
+                        csv += f'-,,-,,,\n'
+                        continue
+                    with open(f"{feature_results_path}/ecdf_threshold_{thresh}.png.json", 'r') as f:
+                        verifier_data = json.load(f)
+                    vanilla_running_times = verifier_data["running_times"]["Vanilla Verifier"]
+                    vanilla_results = verifier_data["results"]["Vanilla Verifier"]
+                    # one of the hustles one has to do because abCROWN did not filter misclassified instances
+                    if no_instances != len(vanilla_results):
+                        misclassified = len(vanilla_results) - no_instances
+                        no_timeouts_vanilla = sum([1 for result in vanilla_results if result == TIMEOUT])
+                        no_solved_vanilla = sum([1 for result in vanilla_results if result != TIMEOUT]) - misclassified
+                        no_verified_vanilla = sum([1 for result in vanilla_results if result == UNSAT])
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.]) - misclassified
+                    else:
+                        no_timeouts_vanilla = sum([1 for result in vanilla_results if result == TIMEOUT])
+                        no_solved_vanilla = sum([1 for result in vanilla_results if result != TIMEOUT])
+                        no_verified_vanilla = sum([1 for result in vanilla_results if result == UNSAT])
+                        timeout_termination_running_times = verifier_data["running_times"]["Timeout Prediction"]
+                        timeout_termination_results = verifier_data["results"]["Timeout Prediction"]
+                        no_timeouts_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result == 2.])
+                        no_solved_timeout_termination = sum(
+                            [1 for result in timeout_termination_results if result != 2.])
 
-                improv_percentage = (wct_timeout_termination / wct_vanilla) * 100
+                    wct_vanilla = sum([pow(10, log_running_time) for log_running_time in vanilla_running_times])
+                    wct_timeout_termination = sum(
+                        [pow(10, log_running_time) for log_running_time in timeout_termination_running_times])
 
-                if thresh == .99:
-                    improvements = improvements + [improv_percentage]
+                    improv_percentage = (wct_timeout_termination / wct_vanilla) * 100
 
-                solved_difference = no_solved_timeout_termination - no_solved_vanilla
+                    solved_difference = no_solved_timeout_termination - no_solved_vanilla
 
-                if solved_difference < 0:
-                    diff_sign = ""
-                elif solved_difference > 0:
-                    diff_sign = "+"
-                else:
-                    diff_sign = "+-"
+                    if solved_difference < 0:
+                        diff_sign = ""
+                    elif solved_difference > 0:
+                        diff_sign = "$+$"
+                    else:
+                        diff_sign = r"$\pm$"
 
-                with open(f"{experiment_path}/metrics_threshold_{thresh}.json", 'r') as f:
-                    metrics = json.load(f)
+                    csv += f'{round(wct_timeout_termination / 60 / 60, 2)},({round(improv_percentage)}%),{no_solved_timeout_termination},({diff_sign}{solved_difference}),,'
 
-                avg_metrics = metrics["avg"]
-                percentage_ran_in_portfolio = avg_metrics["percentage_ran_in_portfolio"]
-                percentage_ran_with_selected_algo = avg_metrics["percentage_ran_with_selected_algo"]
+                    csv += '\n'
+            with open(f"{results_path}/feature_ablation_{verifier}_{experiment}.csv", 'w') as f:
+                f.write(csv)
 
-                csv += f'{round(wct_timeout_termination / 60 / 60, 2)},({round(improv_percentage)}%), {no_solved_timeout_termination},({diff_sign}{solved_difference}), {round(percentage_ran_in_portfolio * 100, 2)},,'
+    return None
 
-            csv += '\n'
-
-    #print(improvements)
-    #print(f"Average Improvement:", sum(improvements) / len(improvements))
-
-    return csv

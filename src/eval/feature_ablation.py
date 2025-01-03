@@ -2,12 +2,12 @@ import json
 import os
 from collections import defaultdict
 
-from src.util.constants import SUPPORTED_VERIFIERS, VERIFIER_FEATURE_MAP, TIMEOUT
+from src.util.constants import SUPPORTED_VERIFIERS, VERIFIER_FEATURE_MAP, TIMEOUT, ALL_EXPERIMENTS
 
 
 def eval_feature_ablation_study(feature_ablation_study_folder, threshold=0.5, results_folder=None):
     # todo: change that
-    experiments = os.listdir(feature_ablation_study_folder)
+    experiments = ALL_EXPERIMENTS
     for verifier in SUPPORTED_VERIFIERS:
         table_csv = "Excluded Feature,"
         table_csv += ",,".join(experiments) + "\n"

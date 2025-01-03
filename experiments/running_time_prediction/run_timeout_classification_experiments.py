@@ -8,7 +8,7 @@ from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICA
     CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, CONFIG_TIMEOUT_BASELINE
 from src.running_time_prediction.timeout_classification import train_timeout_classifier_random_forest, \
     train_continuous_timeout_classifier, timeout_prediction_baseline
-from src.util.constants import SUPPORTED_VERIFIERS, VERINET, OVAL, ABCROWN
+from src.util.constants import SUPPORTED_VERIFIERS, VERINET, OVAL, ABCROWN, ALL_EXPERIMENTS
 from src.util.data_loaders import load_verinet_data, load_oval_bab_data, load_abcrown_data
 
 
@@ -22,7 +22,7 @@ def run_timeout_prediction_experiment(config: dict):
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
 
@@ -110,7 +110,7 @@ def run_continuous_timeout_prediction_experiment(config: dict):
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
     feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
@@ -150,21 +150,12 @@ def run_continuous_timeout_prediction_experiment(config: dict):
                 os.makedirs(verifier_results_path, exist_ok=True)
                 if verifier == ABCROWN:
                     log_path = os.path.join(experiment_logs_path, config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_abcrown_data
                 elif verifier == VERINET:
                     log_path = os.path.join(experiment_logs_path, config.get("VERINET_LOG_NAME", "VERINET.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_verinet_data
                 elif verifier == OVAL:
                     log_path = os.path.join(experiment_logs_path, config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_oval_bab_data
                 else:
                     # This should never happen!
@@ -221,7 +212,7 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
 
@@ -253,7 +244,7 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
                     print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
                     continue
                 training_inputs, running_times, results, satisfiability_training_outputs = load_abcrown_data(
-                    log_path, par=1, features_from_log=True,
+                    log_path, par=1,
                     neuron_count=experiment_neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
                     frequency=classification_frequency)
                 # filter relevant features
@@ -265,7 +256,7 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
                     print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
                     continue
                 training_inputs, running_times, results, satisfiability_training_outputs = load_verinet_data(
-                    log_path, par=1, features_from_log=True,
+                    log_path, par=1,
                     neuron_count=experiment_neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
                     frequency=classification_frequency, no_classes=no_classes)
                 # filter relevant features
@@ -277,7 +268,7 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
                     print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
                     continue
                 training_inputs, running_times, results, satisfiability_training_outputs = load_oval_bab_data(
-                    log_path, par=1, features_from_log=True,
+                    log_path, par=1,
                     neuron_count=experiment_neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
                     frequency=classification_frequency)
 

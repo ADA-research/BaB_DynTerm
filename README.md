@@ -48,8 +48,7 @@ The repository includes the following modules:
 - `experiments`: Includes scripts and configuration files to rerun the experiments provided in the paper. 
 The configuration files will be explained in more detail later.
 - `src`: The actual source code used to train running time prediction models and to evaluate them in application
-scenarios such as predicting running times using regression models,prematurely terminating unsolvable instances or
-to select the best-performing algorithm on a per-instance basis.
+scenarios such as predicting running times using regression models or prematurely terminating unsolvable instances.
 The `src` module contains the following submodules:
     - `eval`: Code to evaluate experiment results using several metrics. 
     - `parsers` Code to obtain feature values by parsing log files of the examined verification tools.
@@ -69,13 +68,20 @@ First, setup the dependencies:
 2. Install needed dependencies
    1. `pip3 install -r requirements.txt`
 
-Then, download the log files obtained by running the verification systems on the respective benchmarks.
+Now, you can run the experiments from the paper and the appendix (see below) based on pre-parsed features. If you want
+to parse the features based on the original log files, please proceed as follows.
+
+Download the log files obtained by running the verification systems on the respective benchmarks.
 We use those files to extract the instance features.
 
 ```bash
 wget https://rwth-aachen.sciebo.de/s/a6c4VlYRRgQE4st/download -O verification_logs.zip
 unzip verification_logs.zip
 ```
+
+**ATTENTION**: The current implementation does only check for the file name requested and returns the saved 
+features when the log file does not exist. Once a log file is found, the current saved features get overwritten, which
+is important to keep in mind when changing out log files.
 
 ## Reproduction of Results
 

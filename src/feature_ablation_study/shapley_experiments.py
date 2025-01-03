@@ -17,7 +17,7 @@ from src.eval.running_time_prediction import eval_final_timeout_classification, 
 from src.feature_ablation_study.custom_shapley_plots import beeswarm_checkpoint_coloring
 from src.feature_ablation_study.shapley_values import get_shapley_explanation
 from src.running_time_prediction.timeout_classification import train_timeout_classifier_random_forest
-from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL
+from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, ALL_EXPERIMENTS
 from src.util.data_loaders import load_verinet_data, load_oval_bab_data, load_abcrown_data
 
 from shap.plots import beeswarm, bar
@@ -34,7 +34,7 @@ def get_shapley_values_for_timeout_classification(config):
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
 
@@ -69,9 +69,6 @@ def get_shapley_values_for_timeout_classification(config):
                 if verifier == ABCROWN:
                     abcrown_log_file = os.path.join(experiment_logs_path,
                                                     config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
-                    if not os.path.isfile(abcrown_log_file):
-                        print(f"Skipping verifier {verifier}! Log file {abcrown_log_file} not found!")
-                        continue
 
                     features, running_times, results, enum_results = load_abcrown_data(
                         abcrown_log_file,
@@ -81,9 +78,7 @@ def get_shapley_values_for_timeout_classification(config):
                 elif verifier == VERINET:
                     verinet_log_file = os.path.join(experiment_logs_path,
                                                     config.get("VERINET_LOG_NAME", "VERINET.log"))
-                    if not os.path.isfile(verinet_log_file):
-                        print(f"Skipping verifier {verifier}! Log file {verinet_log_file} not found!")
-                        continue
+
                     features, running_times, results, enum_results = load_verinet_data(
                         verinet_log_file,
                         neuron_count=experiment_neuron_count,
@@ -93,9 +88,7 @@ def get_shapley_values_for_timeout_classification(config):
                 elif verifier == OVAL:
                     oval_log_file = os.path.join(experiment_logs_path,
                                                  config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
-                    if not os.path.isfile(oval_log_file):
-                        print(f"Skipping verifier {verifier}! Log file {oval_log_file} not found!")
-                        continue
+
                     features, running_times, results, enum_results = load_oval_bab_data(oval_log_file,
                                                                                         neuron_count=experiment_neuron_count,
                                                                                         feature_collection_cutoff=feature_collection_cutoff,
@@ -162,6 +155,7 @@ def eval_final_shapley_values_continuous_classification(shapley_values_per_fold,
     with open(f"{results_path}/shapley_values.pkl", "wb") as f:
         pickle.dump(shapley_values_per_fold, f)
 
+
 def train_timeout_classifier_with_shapley_explanation(training_inputs, running_times, results_path,
                                                       feature_collection_cutoff,
                                                       verification_results, include_incomplete_results=False,
@@ -180,6 +174,9 @@ def train_timeout_classifier_with_shapley_explanation(training_inputs, running_t
     :param random_state: random state for random forest classifier/five-fold cross validation split
     """
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
+    if training_inputs is None or running_times is None or verification_results is None:
+        print(f"Skipping Experiment for {results_path} - Features or Logs could not be found! ")
+        return
 
     training_inputs = np.array(training_inputs)
     running_time_training_outputs = np.array(running_times)
@@ -289,9 +286,13 @@ def train_continuous_timeout_classifier_shapley(log_path, load_data_func, neuron
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
 
     training_inputs, running_time_training_outputs, results, satisfiability_training_outputs = load_data_func(
-        log_path, par=1, features_from_log=True,
+        log_path, par=1,
         neuron_count=neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
         frequency=classification_frequency, no_classes=no_classes)
+
+    if training_inputs is None or running_time_training_outputs is None or results is None or satisfiability_training_outputs is None:
+        print(f"Skipping Experiment for {log_path} - Features or Logs could not be found! ")
+        return
 
     timeout_indices = np.where(satisfiability_training_outputs == 2)
     no_timeout_indices = np.where(satisfiability_training_outputs != 2)

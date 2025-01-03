@@ -14,10 +14,12 @@ def train_running_time_predictor_random_forest(training_inputs, running_times,
                                                feature_collection_cutoff=None, random_state=42):
     print("---------------------- TRAINING RANDOM FOREST RUNNING TIME PREDICTOR ------------------------")
     # load training data
+    if training_inputs is None or running_times is None or verification_results is None:
+        print(f"Skipping Experiment for {results_path} - Features or Logs could not be found! ")
+        return
     training_inputs = np.array(training_inputs)
     running_times = np.array(running_times)
     verification_results = np.array(verification_results)
-    # training_inputs = preprocessing.normalize(training_inputs, axis=0)
 
     if not include_timeouts:
         print("--------------------------- EXCLUDING TIMEOUTS FROM TRAINING ------------------------------")

@@ -5,7 +5,7 @@ import numpy as np
 
 from src.running_time_prediction.running_time_regression import train_running_time_predictor_random_forest
 from experiments.running_time_prediction.config import CONFIG_RUNNING_TIME_REGRESSION
-from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL
+from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, ALL_EXPERIMENTS
 from src.util.data_loaders import load_abcrown_data, load_verinet_data, load_oval_bab_data
 
 
@@ -43,7 +43,7 @@ def run_experiments_from_config(config):
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_timeouts = config.get("INCLUDE_TIMEOUTS", True)
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
@@ -75,9 +75,6 @@ def run_experiments_from_config(config):
             if verifier == ABCROWN:
                 abcrown_log_file = os.path.join(experiment_logs_path,
                                                 config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
-                if not os.path.isfile(abcrown_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {abcrown_log_file} not found!")
-                    continue
 
                 features, running_times, results, enum_results = load_abcrown_data(
                     abcrown_log_file,
@@ -88,9 +85,6 @@ def run_experiments_from_config(config):
             elif verifier == VERINET:
                 verinet_log_file = os.path.join(experiment_logs_path,
                                                 config.get("VERINET_LOG_NAME", "VERINET.log"))
-                if not os.path.isfile(verinet_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {verinet_log_file} not found!")
-                    continue
                 features, running_times, results, enum_results = load_verinet_data(
                     verinet_log_file,
                     neuron_count=experiment_neuron_count,
@@ -101,9 +95,7 @@ def run_experiments_from_config(config):
             elif verifier == OVAL:
                 oval_log_file = os.path.join(experiment_logs_path,
                                              config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
-                if not os.path.isfile(oval_log_file):
-                    print(f"Skipping verifier {verifier}! Log file {oval_log_file} not found!")
-                    continue
+
                 features, running_times, results, enum_results = load_oval_bab_data(
                     oval_log_file,
                     neuron_count=experiment_neuron_count,

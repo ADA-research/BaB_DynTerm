@@ -1,3 +1,6 @@
+import hashlib
+import os.path
+import pickle
 from collections import defaultdict
 
 import numpy as np
@@ -13,9 +16,9 @@ from src.parsers.parse_oval_log import \
 from src.util.constants import result_to_enum, ABCROWN, VERINET, OVAL
 
 
-def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log=True, feature_path=None,
-                      neuron_count=0, no_classes=10,
-                      feature_collection_cutoff=10, filter_misclassified=False, frequency=None):
+def load_abcrown_data(log_path, artificial_cutoff=None, par=1,
+                      neuron_count=0, no_classes=10, feature_collection_cutoff=10,
+                      filter_misclassified=False, frequency=None):
     """
     Function to return features, running times and verification results based on a log file of ab-CROWN
     :param log_path: path to log file
@@ -31,13 +34,24 @@ def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log
     :return: features, running times, verification results in clear text and verification results as enum.
         If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
     """
-    running_time_dict = parse_abcrown_log(load_log_file(log_path))
-    if features_from_log:
+    features_hash = get_arguments_hash(log_path=log_path, artificial_cutoff=artificial_cutoff, par=par,
+                                       neuron_count=neuron_count, no_classes=no_classes,
+                                       feature_collection_cutoff=feature_collection_cutoff,
+                                       filter_misclassified=filter_misclassified, frequency=frequency)
+    feature_path = f'./features/{features_hash}.pkl'
+    if not os.path.exists(feature_path) and not os.path.exists(log_path):
+        return None, None, None, None
+    if not os.path.exists(log_path):
+        with open(feature_path, 'rb') as f:
+            features, running_time_dict = pickle.load(f)
+    else:
+        running_time_dict = parse_abcrown_log(load_log_file(log_path))
         features = get_features_from_verification_log_abcrown(load_log_file(log_path),
                                                               bab_feature_cutoff=feature_collection_cutoff,
                                                               frequency=frequency, total_neuron_count=neuron_count)
-    else:
-        features = np.load(feature_path, allow_pickle=True)
+        with open(feature_path, 'wb') as f:
+            pickle.dump((features, running_time_dict), f)
+
     running_times = [value["time"] for key, value in running_time_dict.items()]
     results = [value["result"] for key, value in running_time_dict.items()]
 
@@ -65,9 +79,9 @@ def load_abcrown_data(log_path, artificial_cutoff=None, par=1, features_from_log
     return features, running_times, results, np.array(enum_results)
 
 
-def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None,
+def load_verinet_data(log_path, artificial_cutoff=None, par=1,
                       filter_misclassified=False, neuron_count=0, feature_collection_cutoff=10, frequency=None,
-                      no_classes=10, features_from_log=True):
+                      no_classes=10):
     """
     Function to return features, running times and verification results based on a log file of VeriNet
     :param log_path: path to log file
@@ -83,11 +97,25 @@ def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None
     :return: features, running times, verification results in clear text and verification results as enum.
         If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
     """
-    running_time_dict = parse_verinet_log(load_log_file(log_path))
-    log_string = load_log_file(log_path)
-    features = get_features_from_verification_log_verinet(log_string, total_neuron_count=neuron_count,
-                                                          bab_feature_cutoff=feature_collection_cutoff,
-                                                          frequency=frequency, no_classes=no_classes)
+    features_hash = get_arguments_hash(log_path=log_path, artificial_cutoff=artificial_cutoff, par=par,
+                                       neuron_count=neuron_count, no_classes=no_classes,
+                                       feature_collection_cutoff=feature_collection_cutoff,
+                                       filter_misclassified=filter_misclassified, frequency=frequency)
+    feature_path = f'./features/{features_hash}.pkl'
+    if not os.path.exists(feature_path) and not os.path.exists(log_path):
+        return None, None, None, None
+    if not os.path.exists(log_path):
+        with open(feature_path, 'rb') as f:
+            features, running_time_dict = pickle.load(f)
+    else:
+        running_time_dict = parse_verinet_log(load_log_file(log_path))
+        log_string = load_log_file(log_path)
+        features = get_features_from_verification_log_verinet(log_string, total_neuron_count=neuron_count,
+                                                              bab_feature_cutoff=feature_collection_cutoff,
+                                                              frequency=frequency, no_classes=no_classes)
+        with open(feature_path, 'wb') as f:
+            pickle.dump((features, running_time_dict), f)
+
     running_times = [value["time"] for key, value in running_time_dict.items()]
     results = [value["result"] for key, value in running_time_dict.items()]
 
@@ -126,8 +154,7 @@ def load_verinet_data(log_path, artificial_cutoff=None, par=1, feature_path=None
     return features, running_times, results, np.array(enum_results)
 
 
-def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par=1, features_from_log=True,
-                       feature_path=None, no_classes=10,
+def load_oval_bab_data(log_path, artificial_cutoff=None, par=1, no_classes=10,
                        neuron_count=0, feature_collection_cutoff=10, filter_misclassified=False, frequency=None):
     """
     Function to return features, running times and verification results based on a log file of Oval.
@@ -144,14 +171,25 @@ def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par
     :return: features, running times, verification results in clear text and verification results as enum.
         If frequency is not None, features are a dict where features are provided for each checkpoint, else a numpy array.
     """
-    running_time_dict = parse_oval_log(load_log_file(log_path))
-    if features_from_log:
+    features_hash = get_arguments_hash(log_path=log_path, artificial_cutoff=artificial_cutoff, par=par,
+                                       neuron_count=neuron_count, no_classes=no_classes,
+                                       feature_collection_cutoff=feature_collection_cutoff,
+                                       filter_misclassified=filter_misclassified, frequency=frequency)
+    feature_path = f'./features/{features_hash}.pkl'
+    if not os.path.exists(feature_path) and not os.path.exists(log_path):
+        return None, None, None, None
+    if not os.path.exists(log_path):
+        with open(feature_path, 'rb') as f:
+            features, running_time_dict = pickle.load(f)
+    else:
+        running_time_dict = parse_oval_log(load_log_file(log_path))
         features = get_features_from_verification_log_oval(load_log_file(log_path),
                                                            bab_feature_cutoff=feature_collection_cutoff,
                                                            total_neuron_count=neuron_count,
                                                            frequency=frequency)
-    else:
-        features = np.load(feature_path, allow_pickle=True)
+        with open(feature_path, 'wb') as f:
+            pickle.dump((features, running_time_dict), f)
+
     running_times = [value["time"] for key, value in running_time_dict.items()]
     results = [value["result"] for key, value in running_time_dict.items()]
 
@@ -159,8 +197,6 @@ def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par
         if artificial_cutoff and running_times[i] > artificial_cutoff:
             running_times[i] = artificial_cutoff
             results[i] = "Timeout"
-        if fixed_timeout and results[i] == "Timeout":
-            running_times[i] = fixed_timeout
         if results[i] == "Timeout":
             running_times[i] = running_times[i] * par
     if filter_misclassified:
@@ -190,3 +226,14 @@ def load_oval_bab_data(log_path, artificial_cutoff=None, fixed_timeout=None, par
         features[features == np.inf] = 0
 
     return features, running_times, results, np.array(enum_results)
+
+
+def get_arguments_hash(*args, **kwargs):
+    args_tuple = tuple(args)
+    kwargs_tuple = tuple(sorted(kwargs.items()))  # Sort to ensure consistent order
+
+    all_args = (args_tuple, kwargs_tuple)
+
+    serialized = repr(all_args).encode()
+
+    return hashlib.sha256(serialized).hexdigest()

@@ -5,7 +5,7 @@ from pathlib import Path
 from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
 from src.eval.feature_ablation import eval_feature_ablation_study
 from src.feature_ablation_study.feature_ablation import train_continuous_timeout_classifier_feature_ablation_worker
-from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL
+from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, ALL_EXPERIMENTS
 from src.util.data_loaders import load_abcrown_data, load_verinet_data, load_oval_bab_data
 from src.util.tables import create_timeout_termination_table_feature_ablation
 
@@ -20,7 +20,7 @@ def run_feature_ablation_study_continuous_timeout_classification(config, thresho
     verification_logs_path = Path(config.get("VERIFICATION_LOGS_PATH", "./verification_logs"))
     experiments = config.get("INCLUDED_EXPERIMENTS", None)
     if not experiments:
-        experiments = os.listdir(verification_logs_path)
+        experiments = ALL_EXPERIMENTS
 
     include_incomplete_results = config.get("INCLUDE_INCOMPLETE_RESULTS", True)
     feature_collection_cutoff = config.get("FEATURE_COLLECTION_CUTOFF", 10)
@@ -60,21 +60,12 @@ def run_feature_ablation_study_continuous_timeout_classification(config, thresho
                 os.makedirs(verifier_results_path, exist_ok=True)
                 if verifier == ABCROWN:
                     log_path = os.path.join(experiment_logs_path, config.get("ABCROWN_LOG_NAME", "ABCROWN.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_abcrown_data
                 elif verifier == VERINET:
                     log_path = os.path.join(experiment_logs_path, config.get("VERINET_LOG_NAME", "VERINET.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_verinet_data
                 elif verifier == OVAL:
                     log_path = os.path.join(experiment_logs_path, config.get("OVAL_BAB_LOG_NAME", "OVAL-BAB.log"))
-                    if not os.path.isfile(log_path):
-                        print(f"Skipping verifier {verifier}! Log file {log_path} not found!")
-                        continue
                     load_data_func = load_oval_bab_data
                 else:
                     # This should never happen!

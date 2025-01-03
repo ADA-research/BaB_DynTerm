@@ -25,6 +25,9 @@ def train_timeout_classifier_random_forest(training_inputs, running_times, resul
     :param threshold: confidence threshold a classification must exceed such that is it counted
     :param random_state: random state for random forest classifier/five-fold cross validation split
     """
+    if training_inputs is None or running_times is None or verification_results is None:
+        print(f"Skipping Experiment for {results_path} - Features or Logs could not be found! ")
+        return
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
 
     training_inputs = np.array(training_inputs)
@@ -131,9 +134,13 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
     print("---------------------- TRAINING RANDOM FOREST TIMEOUT CLASSIFIER ------------------------")
 
     training_inputs, running_time_training_outputs, results, satisfiability_training_outputs = load_data_func(
-        log_path, par=1, features_from_log=True,
+        log_path, par=1,
         neuron_count=neuron_count, feature_collection_cutoff=10, filter_misclassified=True,
         frequency=classification_frequency, no_classes=no_classes)
+
+    if training_inputs is None or running_time_training_outputs is None or results is None or satisfiability_training_outputs is None:
+        print(f"Skipping Experiment for {log_path} - Features or Logs could not be found! ")
+        return
 
     timeout_indices = np.where(satisfiability_training_outputs == 2)
     no_timeout_indices = np.where(satisfiability_training_outputs != 2)

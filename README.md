@@ -89,7 +89,7 @@ is important to keep in mind when changing out log files.
 
 You can reproduce all experiment results presented in the main paper by executing `python3 run_experiments_main_paper.py`.
 
-After successful termination of the script, you should find the folder `results_continuous_timeout_classification` under `./results`
+After successful termination of the script, you should find the folder `results_dynamic_algorithm_termination` under `./results`
 
 These folders include plots (Scatter Plots, ECDF Plots, Confusion Matrices) as well as metrics per fold and average metrics in `metrics.json`
 (in case of different thresholds `metrics_thresh_{thresh}.json`.

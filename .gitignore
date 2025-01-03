@@ -3,3 +3,4 @@ venv
 .DS_Store
 verification_logs
 results/**/*
+__pycache__

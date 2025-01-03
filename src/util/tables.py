@@ -240,7 +240,7 @@ def create_timeout_termination_table_feature_ablation(results_path, thresholds, 
                 no_instances = experiment_samples[experiment]
                 print(f"----------------- {experiment} -------------------")
                 # get baseline
-                baseline_results_path = f"./results/results_continuous_timeout_classification/{experiment}/{verifier}"
+                baseline_results_path = f"./results/results_dynamic_algorithm_termination/{experiment}/{verifier}"
                 if not os.path.exists(f"{baseline_results_path}/ecdf_threshold_{thresh}.png.json"):
                     continue
 

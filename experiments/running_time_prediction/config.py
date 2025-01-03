@@ -106,7 +106,7 @@ CONFIG_DYNAMIC_ALGORITHM_TERMINATION = {
     "ABCROWN_LOG_NAME": "abCROWN.log",
     "OVAL_BAB_LOG_NAME": "OVAL-BAB.log",
     "VERINET_LOG_NAME": "VERINET.log",
-    "RESULTS_PATH": "./results/results_continuous_timeout_classification",
+    "RESULTS_PATH": "./results/results_dynamic_algorithm_termination",
     # If empty, use all folders in ./verification_logs
     "INCLUDED_EXPERIMENTS": [],
     "FEATURE_COLLECTION_CUTOFF": "ADAPTIVE",
@@ -156,12 +156,12 @@ CONFIG_DYNAMIC_ALGORITHM_TERMINATION = {
     }
 }
 
-CONFIG_DYNAMIC_ALGORITHM_TERMINATION_CLASSIFICATION_APPENDIX = {
+CONFIG_DYNAMIC_ALGORITHM_TERMINATION_APPENDIX = {
     "VERIFICATION_LOGS_PATH": "./verification_logs/",
     "ABCROWN_LOG_NAME": "abCROWN.log",
     "OVAL_BAB_LOG_NAME": "OVAL-BAB.log",
     "VERINET_LOG_NAME": "VERINET.log",
-    "RESULTS_PATH": "./results/results_continuous_timeout_classification",
+    "RESULTS_PATH": "./results/results_dynamic_algorithm_termination",
     # If empty, use all folders in ./verification_logs
     "INCLUDED_EXPERIMENTS": [],
     "FEATURE_COLLECTION_CUTOFF": "ADAPTIVE",
@@ -216,7 +216,7 @@ CONFIG_DYNAMIC_ALGORITHM_TERMINATION_THETA_STUDY = {
     "ABCROWN_LOG_NAME": "abCROWN.log",
     "OVAL_BAB_LOG_NAME": "OVAL-BAB.log",
     "VERINET_LOG_NAME": "VERINET.log",
-    "RESULTS_PATH": "./results/results_continuous_timeout_classification",
+    "RESULTS_PATH": "./results/results_dynamic_algorithm_termination",
     # If empty, use all folders in ./verification_logs
     "INCLUDED_EXPERIMENTS": [],
     "FEATURE_COLLECTION_CUTOFF": "ADAPTIVE",

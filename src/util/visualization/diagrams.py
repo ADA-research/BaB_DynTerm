@@ -256,9 +256,9 @@ def create_ecdf_for_presentation():
     for benchmark in ['TINY_IMAGENET', 'MNIST_9_100', "CIFAR_RESNET_2B", "VIT"]:
 
         for verifier in ['ABCROWN']:
-            if not os.path.exists(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json"):
+            if not os.path.exists(f"./results/results_dynamic_algorithm_termination/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json"):
                 continue
-            with open(f'./results/results_continuous_timeout_classification/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json', "r") as f:
+            with open(f'./results/results_dynamic_algorithm_termination/{benchmark}/{verifier}/ecdf_threshold_0.99.png.json', "r") as f:
                 data = json.load(f)
 
             our_results = data['results']['Timeout Prediction']
@@ -359,9 +359,9 @@ def create_bar_plots_presentation():
     data_list = []
     for benchmark in benchmarks:
         for verifier in tools:
-            if not os.path.exists(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/metrics_thresh_0.99.json"):
+            if not os.path.exists(f"./results/results_dynamic_algorithm_termination/{benchmark}/{verifier}/metrics_thresh_0.99.json"):
                 continue
-            with open(f"./results/results_continuous_timeout_classification/{benchmark}/{verifier}/metrics_thresh_0.99.json", "r") as f:
+            with open(f"./results/results_dynamic_algorithm_termination/{benchmark}/{verifier}/metrics_thresh_0.99.json", "r") as f:
                 data = json.load(f)
 
             data_list = data_list + [{
@@ -388,8 +388,44 @@ def create_bar_plots_presentation():
     plt.tight_layout()
     ax.set(xlabel=None, ylabel=None)
     plt.savefig(f"./boxplot_tab_2.pdf")
+    
+def create_training_times_boxplot(results_path):
+    sns.set(style="whitegrid")
+    sns.set(font_scale=3)
+    sns.set_style({'font.family': 'serif', 'font.serif': 'Times New Roman'})
+    plt.figure(figsize=(10, 15))
+    training_times = []
+    for experiment in ALL_EXPERIMENTS:
+        for verifier in SUPPORTED_VERIFIERS:
+            if not os.path.exists(f'{results_path}/{experiment}/{verifier}/training_times.json'):
+                continue
+            
+            with open(f'{results_path}/{experiment}/{verifier}/training_times.json', 'r') as f:
+                training_times_experiment = json.load(f)
+            
+            for fold, checkpoints in training_times_experiment.items():
+                for checkpoint, training_time in checkpoints.items():
+                    training_times.append(training_time)
+    df = pd.DataFrame(training_times)
+    print("MIN", df.min())
+    print("MAX", df.max())
+    print("MEAN", df.mean())
+    print("MEDIAN", df.median())
+
+    ax = sns.boxplot(palette='deep',
+                data=df, linewidth=3, showfliers=True, fliersize=15, 
+                flierprops={'marker': 'o', 'markerfacecolor': 'white', 'markeredgecolor': 'black'},
+                fill=True, legend=False)
+    # sns.despine(offset=10, trim=True)
+    plt.xticks([])
+    # sns.move_legend(ax, loc='lower left')
+    # plt.legend(loc="upper right")
+    plt.tight_layout()
+    ax.set(xlabel="Training Time", ylabel="Wall-Clock Time [s]")
+    plt.savefig(f"{results_path}/boxplot_training_times.pdf")
 
 if __name__ == "__main__":
-    create_ecdf_for_presentation()
-    create_bar_plots_presentation()
+    # create_ecdf_for_presentation()
+    # create_bar_plots_presentation()
+    create_training_times_boxplot(results_path='./results/results_dynamic_algorithm_termination')
 

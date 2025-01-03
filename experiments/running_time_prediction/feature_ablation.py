@@ -94,7 +94,7 @@ def feature_ablation_study():
     eval_feature_ablation_study(
         feature_ablation_study_folder="./results/feature_ablation/feature_ablation_continuous_classification",
         threshold=0.99,
-        results_folder="./results/results_continuous_timeout_classification"
+        results_folder="./results/results_dynamic_algorithm_termination"
     )
     for verifier in SUPPORTED_VERIFIERS:
         create_timeout_termination_table_feature_ablation(

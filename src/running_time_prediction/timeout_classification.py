@@ -1,3 +1,5 @@
+import json
+import time
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
@@ -159,6 +161,7 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
     # Fixed Random State for Comparability between fixed and dynamic Timeout Classification
     kf = StratifiedKFold(n_splits=5, random_state=random_state, shuffle=True)
 
+    training_times = {}
     preds = np.array([])
     sat_labels_shuffled = np.array([])
     running_time_labels_shuffled = np.array([])
@@ -179,6 +182,7 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
         test_labels_sat = sat_timeout_labels[test_index]
         running_times_timeout_prediction_test = running_time_training_outputs[test_index].copy()
         test_running_times = running_time_training_outputs[test_index]
+        training_times[fold] = {}
 
         print(f"---------------------------------- Fold {fold} ----------------------------------")
 
@@ -208,7 +212,11 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
             train_inputs = training_inputs_checkpoint[train_index]
             test_inputs = training_inputs_checkpoint[test_index]
             rf_classifier = RandomForestClassifier(n_estimators=200, random_state=random_state)
+            rf_train_start = time.perf_counter()
             rf_classifier.fit(train_inputs, train_labels_sat)
+            rf_train_end = time.perf_counter()
+            rf_training_time = rf_train_end - rf_train_start
+            training_times[fold][checkpoint] = rf_training_time
 
             probability_predictions = rf_classifier.predict_proba(test_inputs)
             if probability_predictions.shape[1] > 1:
@@ -247,7 +255,8 @@ def train_continuous_timeout_classifier(log_path, load_data_func, neuron_count=N
                                       include_incomplete_results=include_incomplete_results,
                                       feature_collection_cutoff=feature_collection_cutoff,
                                       running_times_timeout_prediction=running_time_labels_timeout_prediction)
-
+    with open(f'{results_path}/training_times_{threshold}.json', 'w', encoding='u8') as f:
+        json.dump(training_times, f, indent=2)
 
 def timeout_prediction_baseline(features, running_times, verification_results, verifier,
                                 include_incomplete_results=False, results_path="./results",

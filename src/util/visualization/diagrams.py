@@ -9,7 +9,7 @@ from numpy import ndarray
 from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score
 import seaborn as sns
 
-from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
+from experiments.running_time_prediction.config import CONFIG_DYNAMIC_ALGORITHM_TERMINATION
 from src.parsers.parse_verinet_log import parse_verinet_log
 from src.util.constants import experiment_groups, experiment_samples, SUPPORTED_VERIFIERS, VERIFIER_TO_TEX, \
     ALL_EXPERIMENTS

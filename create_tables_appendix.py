@@ -1,5 +1,5 @@
 from experiments.running_time_prediction.config import CONFIG_RUNNING_TIME_REGRESSION, CONFIG_TIMEOUT_CLASSIFICATION, \
-    CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
+    CONFIG_DYNAMIC_ALGORITHM_TERMINATION
 from src.util.tables import create_running_time_regression_table, create_timeouts_table, \
     create_timeout_termination_table, create_benchmark_overview_table
 
@@ -10,7 +10,7 @@ with open("./tables/table_running_time_regression.csv", 'w', encoding='u8') as f
 
 for thresh in [.5, .9,]:
     table_timeouts_continuous_feature_collection = create_timeouts_table(
-        results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
+        results_path=CONFIG_DYNAMIC_ALGORITHM_TERMINATION["RESULTS_PATH"],
         thresholds=[thresh]
     )
 
@@ -18,7 +18,7 @@ for thresh in [.5, .9,]:
         f.write(table_timeouts_continuous_feature_collection)
 
     table_timeout_termination = create_timeout_termination_table(
-        results_path=CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION["RESULTS_PATH"],
+        results_path=CONFIG_DYNAMIC_ALGORITHM_TERMINATION["RESULTS_PATH"],
         thresholds=[thresh]
     )
 

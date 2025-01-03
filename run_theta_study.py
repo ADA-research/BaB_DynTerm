@@ -1,5 +1,5 @@
 from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION_THETA_STUDY, \
-    CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION_APPENDIX
+    CONFIG_DYNAMIC_ALGORITHM_TERMINATION, CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION_APPENDIX
 from experiments.running_time_prediction.run_timeout_classification_experiments import \
     run_timeout_classification_experiments_from_config
 from src.util.visualization.diagrams import plot_performance_against_theta

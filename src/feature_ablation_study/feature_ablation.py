@@ -13,7 +13,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
 from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICATION, \
-    CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
+    CONFIG_DYNAMIC_ALGORITHM_TERMINATION
 from src.eval.running_time_prediction import eval_final_timeout_classification, eval_timeout_classification_fold
 
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, VERIFIER_FEATURE_MAP, OVAL_FEATURE_NAMES, \

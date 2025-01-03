@@ -2,7 +2,7 @@ import multiprocessing
 import os
 from pathlib import Path
 
-from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
+from experiments.running_time_prediction.config import CONFIG_DYNAMIC_ALGORITHM_TERMINATION
 from src.feature_ablation_study.custom_shapley_plots import aggregate_over_all_benchmarks
 from src.feature_ablation_study.shapley_experiments import train_continuous_timeout_classifier_shapley_worker
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, ALL_EXPERIMENTS
@@ -102,5 +102,5 @@ def run_shapley_value_study_dynamic_timeout_termination(config, thresholds=None,
 
 
 if __name__ == "__main__":
-    run_shapley_value_study_dynamic_timeout_termination(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, thresholds=[.99],
+    run_shapley_value_study_dynamic_timeout_termination(CONFIG_DYNAMIC_ALGORITHM_TERMINATION, thresholds=[.99],
                                                         results_path='./results/shapley_value_study')

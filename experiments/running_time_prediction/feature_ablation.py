@@ -2,7 +2,7 @@ import multiprocessing
 import os
 from pathlib import Path
 
-from experiments.running_time_prediction.config import CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION
+from experiments.running_time_prediction.config import CONFIG_DYNAMIC_ALGORITHM_TERMINATION
 from src.eval.feature_ablation import eval_feature_ablation_study
 from src.feature_ablation_study.feature_ablation import train_continuous_timeout_classifier_feature_ablation_worker
 from src.util.constants import SUPPORTED_VERIFIERS, ABCROWN, VERINET, OVAL, ALL_EXPERIMENTS
@@ -90,7 +90,7 @@ def run_feature_ablation_study_continuous_timeout_classification(config, thresho
 
 
 def feature_ablation_study():
-    # run_feature_ablation_study_continuous_timeout_classification(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, thresholds=[0.99], results_path='./results/feature_ablation/feature_ablation_continuous_classification/')
+    # run_feature_ablation_study_continuous_timeout_classification(CONFIG_DYNAMIC_ALGORITHM_TERMINATION, thresholds=[0.99], results_path='./results/feature_ablation/feature_ablation_continuous_classification/')
     eval_feature_ablation_study(
         feature_ablation_study_folder="./results/feature_ablation/feature_ablation_continuous_classification",
         threshold=0.99,

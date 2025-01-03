@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from experiments.running_time_prediction.config import CONFIG_TIMEOUT_CLASSIFICATION, \
-    CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION, CONFIG_TIMEOUT_BASELINE
+    CONFIG_DYNAMIC_ALGORITHM_TERMINATION, CONFIG_TIMEOUT_BASELINE
 from src.running_time_prediction.timeout_classification import train_timeout_classifier_random_forest, \
     train_continuous_timeout_classifier, timeout_prediction_baseline
 from src.util.constants import SUPPORTED_VERIFIERS, VERINET, OVAL, ABCROWN, ALL_EXPERIMENTS
@@ -287,6 +287,6 @@ def run_baseline_heuristic_experiments_from_config(config: dict):
 
 if __name__ == "__main__":
     run_timeout_classification_experiments_from_config(CONFIG_TIMEOUT_CLASSIFICATION)
-    run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
-    # run_timeout_classification_experiments_from_config(CONFIG_CONTINUOUS_TIMEOUT_CLASSIFICATION)
+    run_timeout_classification_experiments_from_config(CONFIG_DYNAMIC_ALGORITHM_TERMINATION)
+    # run_timeout_classification_experiments_from_config(CONFIG_DYNAMIC_ALGORITHM_TERMINATION)
     # run_baseline_heuristic_experiments_from_config(CONFIG_TIMEOUT_BASELINE)

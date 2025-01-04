@@ -110,14 +110,14 @@ The mapping of the created `.csv` files to the tables in the paper is as follows
 Please run the running time regression experiments, the experiment for different choices of $\theta$
 and the Shapley Value study by executing `python3 run_experiments_appendix.py`. 
 
-The plots corresponding to Figures 2,3 and 4 can be found under `results/shapley_value_study/shapley_values_aggregated_{verifier}.png`.
+The plots corresponding to Figures 3,4 and 5 can be found under `results/shapley_value_study/shapley_values_aggregated_{verifier}.png`.
 The plots in Figure 5 are saved under `results/results_running_time_regression/{BENCHMARK}/{VERIFIER}/scatter_plot.pdf`.
 
 Then execute `create_tables_appendix.py` to create the tables in the Appendix:
 - `table_timeout_termination_{0.5,0.9}.csv` - Appendix, Table 2
 - `table_running_time_regression.csv` - Appendix, Table 3
 
-Finally, to create the plots in Figure 1 of the Appendix, please execute `run_theta_study.py`. The resulting plots
+Finally, to create the plots in Figure 2 of the Appendix, please execute `run_theta_study.py`. The resulting plots
 can then be found in `results/resu.ts/continuous_timeout_classification/theta_distribution_{VERIFIER}.pdf`. Be aware,
 that this script runs the experiments for every $\theta$ between 0.5 and 1 with a step size of 0.01, so it is quite
 resource intensive.
